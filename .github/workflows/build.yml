@@ -141,7 +141,7 @@ jobs:
           raw=$("$nm" "$elf"); syms=$("$nm" -C "$elf")
           if hit ' br_' "$raw"; then echo "::error::BearSSL symbols in the HTTP-only image"; exit 1; fi
           if hit 'FWD_TAS|FWD_ROOTS' "$syms"; then echo "::error::trust anchors in the HTTP-only image"; exit 1; fi
-          wx=$(grep -iE 'metar|airport|fc::taf|wufcsched|startwufc|onwufc|wufcrunheld' <<< "$syms" | grep -v -E 'ADMIN_METAR_JS_GZ|DASH_AIRPORT_JS_GZ' || true)  # + the WU forecast job
+          wx=$(grep -iE 'metar|airport|fc::taf|wufcsched|startwufc|onwufc|wufcrunheld' <<< "$syms" | grep -v -E 'ADMIN_METAR_(JS|PL_JSON)_GZ|DASH_AIRPORT_(JS|PL_JSON)_GZ' || true)  # + the WU forecast job
           if [ -n "$wx" ]; then echo "::error::airport weather code in the HTTP-only image"; echo "$wx" | head -5; exit 1; fi
           s=$(stat -c %s firmware/fauxcloud/build/http/fauxcloud.ino.bin); slot=$(($(awk -F, '$1 ~ /^ *app0 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions.csv))); warn=$(( (slot * 95 + 99) / 100 ))
           echo "HTTP-only image $s B of the app0 slot $slot B (warning at $warn B)"

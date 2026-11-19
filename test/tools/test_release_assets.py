@@ -288,9 +288,9 @@ class AssembleTests(unittest.TestCase):
         self.put(self.log, b"# Changelog\n\n## [Unreleased]\n- next\n")
         self.assertEqual(self.assemble()[0], 1)
         self.assertFalse(os.path.exists(self.out))
-        rc, _, err = self.assemble("--changelog-optional")
+        rc, out, err = self.assemble("--changelog-optional")
         self.assertEqual(rc, 0, err)
-        self.assertIn("stand-in", err)
+        self.assertIn("stand-in", out + err)  # the note goes to stderr, or to stdout as ::notice:: under GitHub Actions
         with open(os.path.join(self.out, "body.md")) as f:
             self.assertIn(R.DRY_RUN_CHANGELOG % self.V, f.read())
         shutil.rmtree(self.out)
