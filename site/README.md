@@ -95,9 +95,9 @@ Photos are never cropped by CSS: each `<img>` carries the file's width and heigh
 
 ## The share card
 
-`site/assets/social.png`, 1280 × 640, < 1 MB: the mark + wordmark, the hero line, the tagline, `fauxcloud.org` and the
-station photo, on the avatar's navy. Its source is a private HTML file, rendered by headless Edge at exactly
-1280 × 640 and saved again by PIL without metadata. Every page links it in `og:image`; the same file is the
+`site/assets/social.png`, 1280 × 640, < 1 MB: the mark + wordmark, the hero line, the tagline and `fauxcloud.org`
+over an illustration (the station, the board in a dashed cloud, the home) on navy. Its source is a private HTML
+file, rendered by headless Edge at exactly 1280 × 640; the PNG carries no metadata chunk (IHDR, IDAT, IEND only). Every page links it in `og:image`; the same file is the
 repository's social preview (Settings → Social preview).
 
 ## `/try/`: the real dashboard on demo data
