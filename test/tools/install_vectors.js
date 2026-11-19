@@ -388,7 +388,8 @@ R.write_zip(sys.argv[1], ent)
   R = rig({ hold, writeFails: 'The device has been lost.', firstOnly: true, ports: [p1, p2] });
   R.inst.board(true); await R.inst.press();
   const job = R.inst.press();
-  for (let i = 0; i < 2000 && !R.writes.length; i++) await tick();
+  // wait by the clock, not by a tick count: on a slow runner the checks before the first write take longer
+  for (const t0 = Date.now(); !R.writes.length && Date.now() - t0 < 20000;) await tick();
   check('race: flashing, the write under way', [R.last(), R.writes.length], ['flashing', 1]);
   R.inst.lost({ n: 9 });
   check('race: another port going away is ignored', R.last(), 'flashing');

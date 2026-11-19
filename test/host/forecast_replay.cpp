@@ -661,7 +661,7 @@ int main(int argc, char** argv) {
         r.beginObject();
         while (r.nextKey(k, sizeof k)) {
           if (!strcmp(k, "icao") && r.readString(v, sizeof v)) memcpy(c.a[0].icao, v, 5), memcpy(o.icao, v, 4);
-          else if (!strcmp(k, "name") && r.readString(v, sizeof v)) snprintf(c.a[0].name, sizeof c.a[0].name, "%s", v);
+          else if (!strcmp(k, "name") && r.readString(v, sizeof v)) snprintf(c.a[0].name, sizeof c.a[0].name, "%.*s", (int)sizeof c.a[0].name - 1, v);  // cut as before; the bound keeps GCC 15 quiet
           else if (!strcmp(k, "km") && r.peek() != 'n') r.readNumber(&km);
           else if (!strcmp(k, "obs") && r.peek() == '"' && r.readString(v, sizeof v)) o.obs_unix = isoUnix(v), o.flags |= MO_VALID;
           else if (!strcmp(k, "auto")) { bool b = false; r.readBool(&b); if (b) o.flags |= MO_AUTO; }

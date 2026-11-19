@@ -35,7 +35,7 @@ if (Get-Command g++ -ErrorAction SilentlyContinue) {
         if ($LASTEXITCODE -ne 0) { throw "C compile failed: $c" }
         $cObjs += $o
     }
-    & g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -I $src @sources @cObjs -o $exe
+    & g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off -I $src @sources @cObjs -o $exe
     if ($LASTEXITCODE -ne 0) { throw "compile failed" }
 } else {
     $vcvars = Get-ChildItem @(
@@ -93,7 +93,7 @@ foreach ($v in $variants) {
     if (-not (Test-Path $tdir)) { New-Item -ItemType Directory $tdir | Out-Null }
     $texe = Join-Path $tdir ("test_fauxcloud_" + $v.dir + ".exe")
     if (Get-Command g++ -ErrorAction SilentlyContinue) {
-        & g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -ffp-contract=off ($v.defs | ForEach-Object { "-D$_" }) -I $src @sources @cObjs -o $texe
+        & g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off ($v.defs | ForEach-Object { "-D$_" }) -I $src @sources @cObjs -o $texe
         if ($LASTEXITCODE -ne 0) { throw ($v.name + " compile failed") }
     } else {
         $vd = ($v.defs | ForEach-Object { '/D' + $_ }) -join ' '
@@ -117,7 +117,7 @@ foreach ($v in $variants) {
 $rexe = Join-Path $outDir "forecast_replay.exe"
 $rsrc = @(Get-ChildItem (Join-Path $src "*.cpp") | ForEach-Object { $_.FullName }) + (Join-Path $PSScriptRoot "forecast_replay.cpp")
 if (Get-Command g++ -ErrorAction SilentlyContinue) {
-    & g++ -std=c++17 -O1 -Wall -Wextra -Werror -ffp-contract=off -I $src @rsrc @cObjs -o $rexe
+    & g++ -std=c++17 -O1 -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off -I $src @rsrc @cObjs -o $rexe
     if ($LASTEXITCODE -ne 0) { throw "forecast_replay compile failed" }
 } else {
     $rList = ($rsrc | ForEach-Object { '"' + $_ + '"' }) -join ' '

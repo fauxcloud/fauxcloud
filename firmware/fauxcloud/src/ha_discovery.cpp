@@ -386,7 +386,16 @@ int annPromoGone(const char* have, const char* want, char gone[][ANN_PROMO_LEN],
   for (int i = 0; i < nh && n < max; i++) {
     bool kept = false;
     for (int j = 0; j < nw && !kept; j++) kept = strcmp(h[i], w[j]) == 0;
+    // h[i] holds at most ANN_PROMO_LEN - 1 characters, so this never truncates; GCC 15 sizes the source by the whole
+    // 2-D array and warns (format-truncation), an error under the host tests' -Werror. Silenced for this call only.
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wformat-truncation"
+#endif
     if (!kept) snprintf(gone[n++], ANN_PROMO_LEN, "%s", h[i]);
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
   }
   return n;
 }

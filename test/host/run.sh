@@ -20,7 +20,8 @@ for c in "$src"/*.c; do
   gcc -std=c99 -O1 -Wall -Wextra -Werror -c $brdefs -I "$src" -I "$src/bearssl" "$c" -o "$o"
   cobjs="$cobjs $o"
 done
-g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -I "$src" "$src"/*.cpp "$here/test_fauxcloud.cpp" $cobjs -o "$here/build/test_fauxcloud"
+# -Wno-missing-field-initializers: the tests fill aggregates partly on purpose (the rest is zero); the host build only
+g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off -I "$src" "$src"/*.cpp "$here/test_fauxcloud.cpp" $cobjs -o "$here/build/test_fauxcloud"
 "$here/build/test_fauxcloud"
 # The variants, the same suite each (FC_MAX_STATIONS and FWD_TLS are independent profile constants; three runs by
 # convention): the default run above is the release (FWD_TLS=1, one station); FWD_TLS=0 the HTTP-only fallback;
@@ -28,12 +29,12 @@ g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -ffp-contract=off -I "$src" "$src"/*
 for v in "http:-DFWD_TLS=0" "st2:-DFWD_TLS=1 -DFC_MAX_STATIONS=2 -DFC_DIAG_BENCH=1"; do
   name=${v%%:*}
   defs=${v#*:}
-  g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -ffp-contract=off $defs -I "$src" "$src"/*.cpp "$here/test_fauxcloud.cpp" $cobjs -o "$here/build/test_fauxcloud_$name"
+  g++ -std=c++17 -O1 -g -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off $defs -I "$src" "$src"/*.cpp "$here/test_fauxcloud.cpp" $cobjs -o "$here/build/test_fauxcloud_$name"
   "$here/build/test_fauxcloud_$name" > "$here/build/test_fauxcloud_$name.out" || { cat "$here/build/test_fauxcloud_$name.out"; exit 1; }
   echo "$defs: $(tail -1 "$here/build/test_fauxcloud_$name.out")"
 done
 # The outlook replay against a saved board block -- MATCH exits 0, one code changed exits 1
-g++ -std=c++17 -O1 -Wall -Wextra -Werror -ffp-contract=off -I "$src" "$src"/*.cpp "$here/forecast_replay.cpp" $cobjs -o "$here/build/forecast_replay"
+g++ -std=c++17 -O1 -Wall -Wextra -Werror -Wno-missing-field-initializers -ffp-contract=off -I "$src" "$src"/*.cpp "$here/forecast_replay.cpp" $cobjs -o "$here/build/forecast_replay"
 fx="$here/fixtures"
 "$here/build/forecast_replay" "$fx/replay-hourly.json" "$fx/replay-live.json" "$fx/replay-bridge.json" >/dev/null
 sed 's/"p_falling"/"p_steady"/' "$fx/replay-live.json" > "$here/build/replay-live-diff.json"
