@@ -7,7 +7,7 @@ release notes, so every release needs its own `## [<version>]` section before it
 
 ## [Unreleased]
 
-## [1.0.0-rc.1] - unreleased
+## [1.0.0-rc.1] - 2026-11-19
 
 The first public release candidate of fauxcloud. It was verified on one console: a Vevor 7-in-1, model YT60234,
 firmware 1.0.1, EU 868 MHz. Other consoles are not tested yet; see
