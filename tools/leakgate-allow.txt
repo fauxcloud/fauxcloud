@@ -48,6 +48,15 @@ coords \b(?:lat|lon)"\s*:\s*-?[0-9]+\.[0-9]+ @ docs/api.md
 coords \bLON = -?[0-9]+\.[0-9]+ @ tools/demo_data.py
 coords \b(?:lat|lon) = -?[0-9]+\.[0-9]+ @ test/host/test_fwd.inc
 
+# the built site (pages.yml scans site/_build as published; a --tree path is relative to that folder): the same
+# reviewed data under its built paths. The language packs are web/lang/ (exempt from `polish` at the source path),
+# copied to a/<hash>/; only the rule's own letters are allowed, so the deny list and every other class still apply
+polish [\u0105\u0107\u0119\u0142\u0144\u00f3\u015b\u017a\u017c\u0104\u0106\u0118\u0141\u0143\u00d3\u015a\u0179\u017b] @ a/*/*.pl.json
+# the admin page's minified script carries adminface.js's slug fold (allowed above at its source path)
+polish \.replace\(/\u0142/g, ?["']l["']\) @ a/*/admin.js
+# the /try/ demo data: the same public example point as demo/fixtures, copied into the built site
+coords \b(?:lat|lon)"\s*:\s*-?[0-9]+\.[0-9]+ @ try/data/**/*.json
+
 # the forecast-trial tools keep their data in the gitignored `captures` working folder of the user's own checkout
 path captures[/\\]forecast-trial @ tools/forecast_trial.py
 path captures[/\\]forecast-trial @ tools/t3_score.py
