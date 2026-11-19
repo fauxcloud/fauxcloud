@@ -39,7 +39,7 @@ jobs:
         # fauxcloud builds without secrets.h (settings live in NVS; secrets.h is an optional dev seed)
         sketch: [discovery, fauxcloud]
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
       # the arduino-cli binary is pinned too (the action alone installs the newest 1.x): the same version as the
@@ -196,13 +196,13 @@ jobs:
                --obj "$b/sketch/app_mqtt.cpp.o" --expect absent; then
             echo "::error::the release check passed on the diag image: it cannot bite"; exit 1
           fi
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         if: matrix.sketch == 'fauxcloud'
         with:
           name: fauxcloud-diag-bin
           path: firmware/fauxcloud/build/diag-out/*.bin
           if-no-files-found: error
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: ${{ matrix.sketch }}-bin
           path: firmware/${{ matrix.sketch }}/build/*.bin
@@ -211,7 +211,7 @@ jobs:
       # core's fauxcloud.ino.merged.bin (padded to the whole flash: written at 0x0 it erases the settings)
       - name: Release parts (release calls only)
         if: inputs.release && matrix.sketch == 'fauxcloud'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
         with:
           name: fauxcloud-release-parts
           path: |
@@ -231,14 +231,14 @@ jobs:
   web-assets:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       # the web assets: the generator runs terser (pinned in tools/package-lock.json) through node
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: "20"
       - name: Pinned generator tools (terser), no install scripts
@@ -307,10 +307,10 @@ jobs:
   leakgate:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - name: Leak gate (manifest, public rules, deny-list when the secret exists)
@@ -327,10 +327,10 @@ jobs:
   reuse:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       - name: Install reuse (hash-locked, wheels only)
@@ -343,7 +343,7 @@ jobs:
   host-tests:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
       - name: g++ host tests
