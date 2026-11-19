@@ -1,0 +1,101 @@
+# publish-manifest.txt -- which tracked files are published. Read by tools/leakgate.py.
+#
+# Format: one rule per line, `<class> <glob>`; `#` starts a comment line; blank lines are ignored.
+#   ship <glob>      published, scanned by every rule
+#   private <glob>   never published, never scanned
+#   review <glob>    scanned, but refuses the export until the file is reclassified
+#   binary <glob>    a binary file allowed here (images still pass the metadata check); not a class of its own
+# Globs are anchored at the repository root, gitignore style: `**` spans folders, `*` and `?` stay inside one
+# folder, a trailing `/` means the folder and everything under it. For ship / private / review the FIRST matching
+# line wins; a tracked file that matches no line is unclassified and refuses the export.
+# Lines between `# BEGIN dev-only` and `# END dev-only` are left out of the published copy of this file.
+
+
+# --- never published, wherever they appear ---------------------------------------------------------------------
+ship firmware/fauxcloud/secrets.h.example
+private **/secrets.*
+private **/*.secret
+private firmware/*/build/**
+
+# --- the repository root ------------------------------------------------------------------------------------------
+ship LICENSE
+ship README.md
+ship CHANGELOG.md
+ship THIRD_PARTY_LICENSES.md
+ship THIRD_PARTY_NOTICES_FIRMWARE.txt
+ship COPYRIGHT.md
+ship AUTHORS
+ship CONTRIBUTING.md
+ship SECURITY.md
+ship GOVERNANCE.md
+ship CODE_OF_CONDUCT.md
+ship REUSE.toml
+ship LICENSES/**
+ship .gitattributes
+ship .gitignore
+ship arduino-cli.yaml
+ship .github/**
+
+# --- firmware -----------------------------------------------------------------------------------------------------
+ship firmware/README.md
+ship firmware/fauxcloud/**
+ship firmware/discovery/**
+binary firmware/fauxcloud/web/*.png
+
+# --- tests --------------------------------------------------------------------------------------------------------
+ship test/host/**
+ship test/tools/**
+
+# --- tools --------------------------------------------------------------------------------------------------------
+ship tools/build.ps1
+ship tools/build_site.py
+ship tools/burst_repro.py
+ship tools/capture.ps1
+ship tools/check_diag_bench.py
+ship tools/check_partitions.py
+ship tools/check_rtc_layout.py
+ship tools/coldload.py
+ship tools/decode-coredump.ps1
+ship tools/demo_data.py
+ship tools/forecast_trial.py
+ship tools/fwd_fake_endpoint.py
+ship tools/fwd_reference.py
+ship tools/fwd_reference_fixture.txt
+ship tools/fwd_roots.pem
+ship tools/gen_fwd_roots.py
+ship tools/gen_touch_icon.py
+ship tools/gen_tz_flags.py
+ship tools/gen_web_assets.py
+ship tools/i18n-allow.txt
+ship tools/i18n_inventory.py
+ship tools/i18n_pack.py
+ship tools/laptop-test.ps1
+ship tools/leakgate.py
+ship tools/leakgate-allow.txt
+ship tools/publish-manifest.txt
+ship tools/release_assets.py
+ship tools/mslp_normals.py
+ship tools/ota.py
+ship tools/package.json
+ship tools/package-lock.json
+ship tools/requirements.txt
+ship tools/requirements-reuse.txt
+ship tools/rtc_layout.txt
+ship tools/sim-station.ps1
+ship tools/site_images.py
+ship tools/site_md.py
+ship tools/site_versions.py
+ship tools/t3_score.py
+ship tools/taf_disagree.py
+ship tools/terser_run.js
+ship tools/vendor_bearssl.py
+
+# --- docs, the site and the demo data -----------------------------------------------------------------------------
+ship docs/*.md
+ship docs/LICENSE
+ship site/**
+binary site/**/*.png
+binary site/**/*.webp
+binary site/**/*.jpg
+binary site/**/*.ico
+ship demo/**

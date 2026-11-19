@@ -1,0 +1,169 @@
+# The release: a pushed tag v<version> becomes a DRAFT release with the CI-built assets. CI never publishes: the
+# maintainer soaks the drafted image on a board and presses Publish (docs/releasing.md).
+#
+#   version  the tag is exactly "v" + FC_VERSION_BASE (firmware/fauxcloud/app.h), not a -dev version, on main
+#   build    build.yml as a whole (every compile cell and gate, the web checks, the leak gate, the host tests), with the
+#            tag commit's time as SOURCE_DATE_EPOCH and the release parts uploaded
+#   assets   tools/release_assets.py: the image markers, the partition table, the first-install layout (nothing over
+#            NVS), the assets, SHA256SUMS, the body from .github/RELEASE_TEMPLATE.md; the leak gate on every file that
+#            goes out (the texts, the strings and bytes of every image and ELF), the private deny-list required
+#   release  the draft, with the only write permission of the run
+#
+# A manual run (workflow_dispatch) is the dry run: the same jobs on the chosen branch, no tag check, a stand-in line
+# where the version has no CHANGELOG.md section, the assets as a run artifact; with "draft" ticked it also creates a draft named dry-run-<run number> (no tag is created until a draft is
+# published, so delete it). Third-party actions are pinned by commit, the tag in the comment.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: "Also create a draft release dry-run-<run number> (delete it afterwards)"
+        type: boolean
+        default: false
+
+permissions: {}
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      tag: ${{ steps.v.outputs.tag }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      epoch: ${{ steps.v.outputs.epoch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0          # main's history, for the "tag is on main" check
+          persist-credentials: false
+      - name: Tag == FC_VERSION_BASE, not -dev, on main
+        id: v
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          set -o pipefail
+          if [ "$EVENT" = push ]; then
+            [ "$REF_TYPE" = tag ] || { echo "::error::a release runs on a tag push only"; exit 1; }
+            python3 -I tools/release_assets.py version --app-h firmware/fauxcloud/app.h --tag "$REF_NAME" | tee -a "$GITHUB_OUTPUT"
+            git merge-base --is-ancestor "$GITHUB_SHA" origin/main \
+              || { echo "::error::tag $REF_NAME is not on main: a release is cut from main only"; exit 1; }
+            [ "$(git cat-file -t "refs/tags/$REF_NAME")" = tag ] \
+              || echo "::warning::$REF_NAME is a lightweight tag: release tags are annotated (git tag -a)"
+          else
+            echo "::notice::dry run on $REF_NAME: no tag check, no release unless 'draft' is ticked"
+            python3 -I tools/release_assets.py version --app-h firmware/fauxcloud/app.h | tee -a "$GITHUB_OUTPUT"
+          fi
+          echo "epoch=$(git log -1 --format=%ct "$GITHUB_SHA")" | tee -a "$GITHUB_OUTPUT"
+
+  build:
+    needs: version
+    permissions:
+      contents: read
+    uses: ./.github/workflows/build.yml
+    with:
+      release: true
+      source_date_epoch: ${{ needs.version.outputs.epoch }}
+    secrets:
+      LEAKGATE_DENY: ${{ secrets.LEAKGATE_DENY }}
+
+  assets:
+    needs: [version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      SOURCE_DATE_EPOCH: ${{ needs.version.outputs.epoch }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: fauxcloud-release-parts
+          path: parts
+      # a tag release needs the CHANGELOG.md section of its version; a dry run of a development tree has none and gets
+      # a stand-in line (and a notice) instead
+      - name: Assets, SHA256SUMS and the release body (markers, partition table, nothing over NVS)
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          opt=(); [ "$EVENT" = push ] || opt=(--changelog-optional)
+          python -I tools/release_assets.py assemble --version "$VERSION" --tag "$TAG" --parts parts --out dist \
+            --partitions firmware/fauxcloud/partitions.csv --notices THIRD_PARTY_NOTICES_FIRMWARE.txt \
+            --template .github/RELEASE_TEMPLATE.md --changelog CHANGELOG.md "${opt[@]}"
+          { echo "### Release assets $TAG"; echo '```'; (cd dist/assets && ls -l --time-style=+ | tail -n +2); echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      # the images: the public rules on their strings except the classes compressed web assets fake (dnum, tag,
+      # polish), the deny-list on every byte; the ELFs also skip home-path (the prebuilt SDK archives' build folders)
+      - name: Leak gate on every file that goes out (texts, images, ELFs)
+        env:
+          LEAKGATE_DENY: ${{ secrets.LEAKGATE_DENY }}
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ -z "$LEAKGATE_DENY" ]; then
+            [ "$EVENT" = push ] && { echo "::error::a release needs the private deny-list (secret LEAKGATE_DENY)"; exit 1; }
+            echo "::notice::LEAKGATE_DENY is not set here: public rules only (dry run)"
+          fi
+          bins=(); for f in dist/gate/bin/*; do bins+=(--bin "$f"); done
+          elfs=(); for f in dist/gate/elf/*; do elfs+=(--bin "$f"); done
+          python -I tools/leakgate.py --strict-tags --github --summary-only --tree dist/gate/text "${bins[@]}" \
+            --bin-skip dnum,tag,polish || { echo "::error::LEAK GATE FAILED on the release texts or images"; exit 1; }
+          python -I tools/leakgate.py --strict-tags --github --summary-only "${elfs[@]}" \
+            --bin-skip dnum,tag,polish,home-path || { echo "::error::LEAK GATE FAILED on the ELF files"; exit 1; }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: release-assets
+          path: |
+            dist/assets/
+            dist/body.md
+          if-no-files-found: error
+          retention-days: 14
+
+  release:
+    needs: [version, assets]
+    if: github.event_name == 'push' || inputs.draft
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write           # the one write of the run: create the draft and upload its assets
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.version.outputs.version }}
+      TAG: ${{ needs.version.outputs.tag }}
+      PRE: ${{ needs.version.outputs.prerelease }}
+      EVENT: ${{ github.event_name }}
+      RUN: ${{ github.run_number }}
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          name: release-assets
+          path: rel
+      # no checkout here: this job runs no code from the repository, only gh with the files the assets job wrote
+      - name: Draft release (never published by CI)
+        run: |
+          if [ "$EVENT" = push ]; then
+            name="$TAG"; title="fauxcloud $VERSION"; extra=(--verify-tag)
+          else
+            name="dry-run-$RUN"; title="DRY RUN $RUN: fauxcloud $VERSION (delete this draft)"; extra=(--target "$GITHUB_SHA")
+          fi
+          if gh release view "$name" >/dev/null 2>&1; then
+            echo "::error::a release named $name exists already (a draft of an earlier run?): delete it, then re-run"; exit 1
+          fi
+          [ "$PRE" = true ] && extra+=(--prerelease)
+          gh release create "$name" --draft --title "$title" --notes-file rel/body.md "${extra[@]}" rel/assets/*
+          echo "Draft release **$name** created: review it, soak the image, then publish it by hand." >> "$GITHUB_STEP_SUMMARY"

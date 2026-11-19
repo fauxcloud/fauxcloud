@@ -1,0 +1,24 @@
+# The labels of this repository. GitHub does not read this file: the maintainer creates each label by hand from it,
+# and a test checks that every label an issue form or a workflow names is listed here (a missing label is silently
+# not applied).
+- name: bug
+  color: d73a4a
+  description: Something in fauxcloud does not work as the README says.
+- name: needs-triage
+  color: fbca04
+  description: Not read by the maintainer yet.
+- name: console-report
+  color: 1d76db
+  description: How fauxcloud works with a weather console that is not on the list yet.
+- name: accepted
+  color: 0e8a16
+  description: The maintainer takes a pull request for this issue (see CONTRIBUTING.md).
+- name: needs-bench
+  color: 5319e7
+  description: Waits for the maintainer's test on a separate bench board.
+- name: needs-info
+  color: d876e3
+  description: Waits for details from the reporter; closes after 30 + 7 days without an answer.
+- name: stale
+  color: ededed
+  description: No answer for 30 days; closes in 7 days unless the missing information arrives.

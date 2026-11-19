@@ -1,0 +1,13 @@
+{
+  "_note": "The boards the installer at /install/ offers: human-curated, one entry per board image. tools/site_versions.py merges this file with the published releases into site/firmware/versions.json (the file the installer reads). `asset` names the release's factory zip of this board ({version} is filled in); `photo` is a file of site/assets/ with its pixel size. To add a board: an entry here, a photo in site/assets/, its own release image.",
+  "boards": {
+    "esp32-wroom-32-4mb": {
+      "label": "ESP32-WROOM-32 DevKit (4 MB)",
+      "chip": "ESP32",
+      "flash_size": "4MB",
+      "photo": "/assets/board-300.jpg",
+      "photo_size": [300, 402],
+      "asset": "fauxcloud-{version}-factory.zip"
+    }
+  }
+}

@@ -1,0 +1,40 @@
+# Closes an issue labelled `needs-info` that gets no answer: after 30 quiet days it is marked `stale` with a warning,
+# after 7 more it closes. A comment or any update removes the mark and restarts the count. Nothing else ever closes by
+# itself: issues without `needs-info`, issues labelled `accepted` or `needs-bench`, and every pull request are left alone.
+# A manual run is a dry run by default (it only logs what it would do); untick the box for a real run.
+name: stale
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"  # Monday 06:00 UTC
+  workflow_dispatch:
+    inputs:
+      debug_only:
+        description: Dry run (log only, change nothing)
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  stale:
+    name: needs-info without an answer
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      issues: write
+    steps:
+      - uses: actions/stale@4391f3da665fdf50b6810c1a66712fb9ba21aa93  # v11.0.0
+        with:
+          only-issue-labels: needs-info
+          days-before-issue-stale: 30
+          days-before-issue-close: 7
+          days-before-pr-stale: -1
+          days-before-pr-close: -1
+          stale-issue-label: stale
+          exempt-issue-labels: accepted,needs-bench
+          remove-stale-when-updated: true
+          stale-issue-message: "No answer for 30 days. This closes in 7 days unless the missing information arrives; a comment keeps it open."
+          close-issue-message: "Closed for lack of information. When you have the details, comment here and a maintainer will reopen it, or open a new one."
+          # a scheduled run has no inputs, so this is false there
+          debug-only: ${{ inputs.debug_only == true }}

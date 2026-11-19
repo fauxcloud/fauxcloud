@@ -1,0 +1,93 @@
+<main id="main">
+  <section class="hero glass">
+    <div class="intro-logo" aria-hidden="true"><div class="il-row"><svg class="im" viewBox="0 0 256 256"><use href="#mark"/></svg><svg class="iw" viewBox="3 -712 4389 721"><use href="#wm" x="3" y="-712" width="4389" height="721"/></svg></div><span class="il-tag">local weather bridge for Wi-Fi weather stations</span></div>
+    <div>
+      <div class="intro">
+        <h1>Your weather station's cloud, in your own home.</h1>
+      </div>
+      <p class="hlede">fauxcloud is free, open-source firmware (GPL-3.0-or-later). Your weather station uploads to it instead of the cloud. No soldering: you install it on an ESP32 board from your browser.</p>
+      <ul class="modes">
+        <li><b>No internet needed.</b> Nothing leaves the house.</li>
+        <li><b>Online services and airport weather, if you want them.</b> Off by default.</li>
+      </ul>
+      <p class="hcompat">Works with Weather Underground-compatible stations. <a href="#compat">Will it work with mine?</a></p>
+      <div class="ctas"><a class="btn primary" href="/docs/get-started/">Get started</a><a class="btn quiet" href="/try/">Try the demo</a></div>
+    </div>
+{{> diagram}}
+  </section>
+  <section id="features">
+    <h2 class="lead2">What you get</h2>
+    <div class="feat glass">
+      <div><svg aria-hidden="true"><use href="#i-dash"/></svg><h3>A dashboard on your network</h3><p>Live values, today's charts and the history of every measurement, at fauxcloud.local.</p><p>Home network only.</p></div>
+      <div><svg aria-hidden="true"><use href="#i-history"/></svg><h3>History</h3><p>Hourly records for over three months, daily records for two years. Export to CSV.</p><p>One console per ESP32-WROOM-32 board.</p></div>
+      <div><svg aria-hidden="true"><use href="#i-cloud-sun"/></svg><h3>Local outlook</h3><p>The weather now and where it is heading, from your station's own readings.</p><p>Not a forecast.</p></div>
+      <div><svg aria-hidden="true"><use href="#i-home"/></svg><h3>Home Assistant</h3><p>Wind, gust, rain and pressure as entities that Home Assistant finds by itself (MQTT discovery). A quiet station shows as unavailable.</p><p>Needs an MQTT broker (a small message server).</p></div>
+      <div><svg aria-hidden="true"><use href="#i-upload"/></svg><h3>Online weather services</h3><p>Send your readings to Weather Underground, Windy and others, over HTTPS.</p><p>Off until you turn it on.</p></div>
+      <div><svg aria-hidden="true"><use href="#i-plane"/></svg><h3>Airport weather</h3><p>The latest report and forecast from an airport you choose, next to your readings.</p><p>Off until you turn it on.</p></div>
+      <div><svg aria-hidden="true"><use href="#i-refresh"/></svg><h3>Updates from the browser</h3><p>Install from this site over USB; later updates from Settings, with rollback.</p><p>Installing needs Chrome or Edge on a computer.</p></div>
+      <div><svg viewBox="0 0 256 256" aria-hidden="true"><use href="#mark"/></svg><h3>No account, no app, no subscription.</h3><p>Your readings stay at home and stay yours.</p></div>
+    </div>
+  </section>
+
+  <section id="online">
+    <h2 class="lead2">Optional, with internet</h2>
+    <p class="sec-p">Both stay off until you turn them on in Settings.</p>
+    <div class="opts">
+      <div class="glass"><h3><svg aria-hidden="true"><use href="#i-upload"/></svg>Send your readings to online services <span class="tc">Off by default</span></h3>
+        <p><span class="svc">Weather Underground, Windy, WOW-BE, PWSweather</span> or any Weather Underground-compatible server.</p>
+        <p>Your station on their maps and pages, sent over HTTPS.</p>
+        <p class="go2"><a href="/docs/online-services/">How it works</a></p></div>
+      <div class="glass"><h3><svg aria-hidden="true"><use href="#i-plane"/></svg>Show airport weather <span class="tc">Off by default</span></h3>
+        <p>Want the weather at the nearest airport too? fauxcloud shows its official report and forecast right next to your own readings.</p>
+        <p>Handy for checking your station, and for setting its pressure.</p>
+        <p class="go2"><a href="/docs/airport-weather/">How it works</a></p></div>
+    </div>
+  </section>
+
+  <section id="compat">
+    <div class="compat glass">
+      <div class="ctext">
+        <h2>Works with Weather Underground-compatible stations.</h2>
+        <p class="rule">If your console's setup page has a Weather Underground box, it may work (not tested yet; a console report tells us). If it pairs only through an app, it will not.</p>
+        <p class="vrow"><b>Vevor 7-in-1, model YT60234</b><span class="tc ok">Verified</span></p>
+        <p class="note2">Consoles with the same setup page may work; consoles that pair only through an app or upload only over HTTPS will not.</p>
+        <p class="more"><a href="/docs/compatibility/">See the full list, or report your console</a>. The board it runs on: <a href="/docs/boards/">ESP32-WROOM-32 DevKit</a>.</p>
+      </div>
+      <figure class="shot"><div class="fd"><img src="/assets/station-380.jpg" srcset="/assets/station-380.jpg 380w, /assets/station-760.jpg 760w" sizes="(min-width: 900px) 340px, min(340px, 100vw - 76px)" width="380" height="509" loading="lazy" decoding="async" alt="The outdoor sensor of a 7-in-1 Wi-Fi weather station on its post"></div></figure>
+    </div>
+  </section>
+{{> demo}}
+  <section id="need">
+    <h2 class="lead2">What you need</h2>
+    <div class="needs">
+      <ul class="need">
+        <li><svg aria-hidden="true"><use href="#i-chip"/></svg><b>An ESP32-WROOM-32 board</b><span>4 MB flash, about €5. One console per board. <a href="/docs/boards/">Board notes</a></span></li>
+        <li><svg aria-hidden="true"><use href="#i-usb"/></svg><b>A USB data cable</b><span>One that carries data, not only charge.</span></li>
+        <li><svg aria-hidden="true"><use href="#i-laptop"/></svg><b>Chrome or Edge on a computer</b><span>To install fauxcloud from this site. No tools to set up.</span></li>
+      </ul>
+      <figure class="shot"><div class="fd"><img src="/assets/board-300.jpg" srcset="/assets/board-300.jpg 300w, /assets/board-600.jpg 600w" sizes="260px" width="300" height="402" loading="lazy" decoding="async" alt="An ESP32-WROOM-32 DevKit board on squared paper"></div></figure>
+    </div>
+    <div class="made glass">
+      <div>
+        <h3>Flash it. Print a case. Done.</h3>
+        <ol class="steps3">
+          <li><b>Flash it</b><span>From this site, over USB. No soldering.</span></li>
+          <li><b>Print a case</b><span>A two-part case for the DevKit, about 14 g of PLA. The bare board works the same without it.</span></li>
+          <li><b>Done</b><span>A finished weather bridge on your shelf, next to the router.</span></li>
+        </ol>
+      </div>
+      <div><figure class="shot"><div class="fd"><picture><source media="(max-width: 599px)" srcset="/assets/cases-tall-400.jpg 400w, /assets/cases-tall-800.jpg 800w" sizes="calc(100vw - 82px)" width="400" height="430"><img src="/assets/cases-560.jpg" srcset="/assets/cases-560.jpg 560w, /assets/cases-1120.jpg 1120w" sizes="(min-width: 900px) 460px, calc(100vw - 82px)" width="560" height="410" loading="lazy" decoding="async" alt="Two printed fauxcloud cases with the cloud mark lit, one white, one yellow"></picture></div></figure>
+        <p class="shot-cap">Printed cases. <a href="https://makerworld.com/en/models/3640408-fauxcloud-esp32-weather-station-enclosure">Print the case</a></p></div>
+    </div>
+    <div class="ctas"><a class="btn primary" href="/install/">Install fauxcloud</a></div>
+  </section>
+
+  <section id="start">
+    <h2 class="lead2">Start from where you are</h2>
+    <div class="sit">
+      <a class="tile glass" href="/docs/troubleshooting/"><h3>My station stopped making sense</h3><p>Temperature stuck, rain not counting, the display shows dashes. Find out which part went quiet.</p><span class="go">Troubleshooting</span></a>
+      <a class="tile glass" href="/docs/get-started/#pair-the-console"><h3>My console never got online</h3><p>The console's setup Wi-Fi (AP) never appears, or the cloud says offline. fauxcloud gives the console its own network to upload to.</p><span class="go">Pair the console</span></a>
+      <a class="tile glass" href="/docs/home-assistant/"><h3>I use Home Assistant</h3><p>Wind, gust, rain and pressure as local entities, with availability, ready for automations.</p><span class="go">See the entities</span></a>
+    </div>
+  </section>
+</main>

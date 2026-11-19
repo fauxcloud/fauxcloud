@@ -1,0 +1,1 @@
+ID=EXAMPLE1&PASSWORD=examplekey&dateutc=2026-11-5%2010:14:58&baromin=29.82&tempf=47.1&humidity=80&dewptf=41.2&rainin=0.00&dailyrainin=0.05&winddir=245&windspeedmph=4.5&windgustmph=7.0&UV=0&solarRadiation=96.1

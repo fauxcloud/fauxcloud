@@ -1,0 +1,1 @@
+{"on":true,"airports":[{"icao":"EGLL","name":"Heathrow","km":61,"obs":"2026-11-12T19:50:00Z","age_s":1320,"stale":false,"cur":true,"cor":false,"auto":false,"qnh_hpa":1009.0,"wx":{"precip":true,"rain":false,"drizzle":true,"snow":false,"freezing":false,"thunder":false,"fog":false,"mist":true,"int":-1},"taf":null}],"reference":null,"last":{"t":"2026-11-12T20:00:00Z","result":"ok"}}

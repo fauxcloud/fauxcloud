@@ -1,0 +1,140 @@
+# Licensing of the files in this repository (REUSE specification 3.3, https://reuse.software).
+# Our own code carries the GPL-3.0-or-later; the additional permission for the Espressif SDK libraries is in
+# COPYRIGHT.md (a section 7 permission applies to the whole program; REUSE expressions accept only SPDX-listed
+# exceptions, so it is not repeated here). Third-party files keep their own licences (override below).
+version = 1
+SPDX-PackageName = "fauxcloud"
+
+[[annotations]]
+path = "**"
+SPDX-FileCopyrightText = "2026 the fauxcloud authors"
+SPDX-License-Identifier = "GPL-3.0-or-later"
+
+# documentation and the site's text: CC BY-SA 4.0 (configuration snippets in it: CC0 1.0, said on their pages)
+[[annotations]]
+path = ["docs/**", "README.md"]
+precedence = "override"
+SPDX-FileCopyrightText = "2026 the fauxcloud authors"
+SPDX-License-Identifier = "CC-BY-SA-4.0"
+
+[[annotations]]
+path = ["LICENSE", "docs/LICENSE", "THIRD_PARTY_LICENSES.md", "THIRD_PARTY_NOTICES_FIRMWARE.txt"]
+precedence = "override"
+SPDX-FileCopyrightText = "the respective authors, as named in each file"
+SPDX-License-Identifier = "LicenseRef-licence-texts"
+
+# the renders of the printed case on the site: the case designer's work, used with permission (LICENSES/)
+[[annotations]]
+path = "site/assets/case-*.jpg"
+precedence = "override"
+SPDX-FileCopyrightText = "KRCreations"
+SPDX-License-Identifier = "LicenseRef-Used-With-Permission"
+
+# the Contributor Covenant 2.1, adapted only in its contact line (attribution at the end of the file)
+[[annotations]]
+path = "CODE_OF_CONDUCT.md"
+precedence = "override"
+SPDX-FileCopyrightText = "Contributor Covenant (https://www.contributor-covenant.org)"
+SPDX-License-Identifier = "CC-BY-4.0"
+
+# BearSSL, vendored unmodified (the device files and the host-test files)
+[[annotations]]
+path = ["firmware/fauxcloud/src/bearssl/**", "test/host/bearssl/**"]
+precedence = "override"
+SPDX-FileCopyrightText = "2016-2018 Thomas Pornin"
+SPDX-License-Identifier = "MIT"
+
+# the vendored sources of the data packs
+[[annotations]]
+path = "firmware/fauxcloud/web/data/sources/tzdata/**"
+precedence = "override"
+SPDX-FileCopyrightText = "the tz contributors (IANA time zone database)"
+SPDX-License-Identifier = "LicenseRef-tz-public-domain"
+
+[[annotations]]
+path = "firmware/fauxcloud/web/data/sources/posix_tz_db/**"
+precedence = "override"
+SPDX-FileCopyrightText = "the posix_tz_db contributors (nayarsystems/posix_tz_db)"
+SPDX-License-Identifier = "MIT"
+
+[[annotations]]
+path = "firmware/fauxcloud/web/data/sources/circle-flags/**"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 HatScripts"
+SPDX-License-Identifier = "MIT"
+
+# the packs built from them
+[[annotations]]
+path = "firmware/fauxcloud/web/data/tz.json"
+precedence = "override"
+SPDX-FileCopyrightText = ["the tz contributors (IANA time zone database)", "the posix_tz_db contributors (nayarsystems/posix_tz_db)"]
+SPDX-License-Identifier = "LicenseRef-tz-public-domain AND MIT"
+
+[[annotations]]
+path = "firmware/fauxcloud/web/data/flags-*.json"
+precedence = "override"
+SPDX-FileCopyrightText = "2026 HatScripts"
+SPDX-License-Identifier = "MIT"
+
+# public CA certificates (the PEM, and the subject + key tables generated from it)
+[[annotations]]
+path = ["tools/fwd_roots.pem", "firmware/fauxcloud/src/fwd_roots.c", "test/host/fwd_roots_der.inc"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "the certificate authorities named in tools/fwd_roots.pem"
+SPDX-License-Identifier = "LicenseRef-public-ca-certificates"
+
+# web files that carry Lucide icon paths (ISC); dash.js, health.js and outlook.js also draw Feather-derived ones (MIT)
+[[annotations]]
+path = ["firmware/fauxcloud/web/core.js", "firmware/fauxcloud/web/adminface.js", "firmware/fauxcloud/web/dash-airport.js"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Lucide Icons and Contributors"
+SPDX-License-Identifier = "ISC"
+
+[[annotations]]
+path = ["firmware/fauxcloud/web/dash.js", "firmware/fauxcloud/web/health.js", "firmware/fauxcloud/web/outlook.js"]
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["2026 Lucide Icons and Contributors", "2013-present Cole Bemis"]
+SPDX-License-Identifier = "ISC AND MIT"
+
+# the edge-refraction field: a port of liquid-glass-js via LiquidGlassSkill
+[[annotations]]
+path = "firmware/fauxcloud/web/dash-lg.js"
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["2025 Armagan Amcalar", "2026 Aref Azizian"]
+SPDX-License-Identifier = "MIT"
+
+# the generated web header: every page and asset above, the data packs and the licence texts (THIRD_PARTY_LICENSES.md)
+[[annotations]]
+path = "firmware/fauxcloud/src/web_assets.h"
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["2026 Lucide Icons and Contributors", "2013-present Cole Bemis", "2025 Armagan Amcalar", "2026 Aref Azizian", "2026 HatScripts", "the posix_tz_db contributors (nayarsystems/posix_tz_db)", "the tz contributors (IANA time zone database)"]
+SPDX-License-Identifier = "ISC AND MIT AND LicenseRef-tz-public-domain AND LicenseRef-licence-texts"
+
+# the pressure normals table: derived from NCEP/NCAR Reanalysis 1 data provided by the NOAA PSL (public domain)
+[[annotations]]
+path = "firmware/fauxcloud/src/mslp_norm.h"
+precedence = "aggregate"
+SPDX-FileCopyrightText = "NOAA Physical Sciences Laboratory (NCEP/NCAR Reanalysis 1 data)"
+SPDX-License-Identifier = "LicenseRef-us-government-public-domain"
+
+# the site's icon and wordmark sprite: Lucide icons (ISC; some Feather-derived, MIT) and the Nunito SemiBold wordmark
+# outlines (OFL 1.1), inside our own markup; the notices are in site/THIRD_PARTY_NOTICES_SITE.txt, served on every page
+[[annotations]]
+path = "site/templates/sprite.svg"
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["2026 Lucide Icons and Contributors", "2013-present Cole Bemis", "2014 The Nunito Project Authors"]
+SPDX-License-Identifier = "ISC AND MIT AND OFL-1.1"
+
+# the site's browser installer: esptool-js's browser bundle, vendored unmodified (site/SOURCES.md), with pako and
+# atob-lite inside; the licence texts are in site/THIRD_PARTY_NOTICES_SITE.txt
+[[annotations]]
+path = "site/assets/esptool-bundle.js"
+precedence = "override"
+SPDX-FileCopyrightText = ["2023 Espressif Systems (Shanghai) Co. Ltd.", "2014-2017 Vitaly Puzrin and Andrei Tuputcyn", "1995-2013 Jean-loup Gailly and Mark Adler", "Hugh Kennedy"]
+SPDX-License-Identifier = "Apache-2.0 AND MIT AND Zlib"
+
+[[annotations]]
+path = "site/THIRD_PARTY_NOTICES_SITE.txt"
+precedence = "override"
+SPDX-FileCopyrightText = "the respective authors, as named in each file"
+SPDX-License-Identifier = "LicenseRef-licence-texts"

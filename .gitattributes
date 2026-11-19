@@ -1,0 +1,5 @@
+# vendored BearSSL keeps upstream's bytes -- its manifest (VENDORED.txt) hashes them; never line-converted
+firmware/fauxcloud/src/bearssl/** -text
+test/host/bearssl/** -text
+# the vendored esptool-js bundle keeps upstream bytes -- site/SOURCES.md hashes them; never line-converted
+site/assets/esptool-bundle.js -text

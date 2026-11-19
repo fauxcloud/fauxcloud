@@ -1,0 +1,9 @@
+{
+  "name": "fauxcloud-tools",
+  "private": true,
+  "description": "Pinned build tools for tools/gen_web_assets.py (terser, mangle only). Install: npm ci --ignore-scripts",
+  "license": "GPL-3.0-or-later",
+  "dependencies": {
+    "terser": "5.36.0"
+  }
+}

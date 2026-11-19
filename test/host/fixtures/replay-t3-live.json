@@ -1,0 +1,35 @@
+{
+ "now": 1,
+ "stations": [
+  {
+   "id": "ST1",
+   "sensor_stale": false,
+   "outlook": {
+    "v": 1,
+    "t": "2026-11-12T20:12:00Z",
+    "as_of": "2026-11-12T20:00:00Z",
+    "gate": null,
+    "state": "wx_drizzle_near",
+    "next": "p_falling",
+    "warn": "mist_near",
+    "qual": null,
+    "conf": "default",
+    "tend": {
+     "d": -3.0,
+     "raw": -3.0,
+     "tide": true,
+     "code": "falling",
+     "fast": false
+    },
+    "left_h": 0
+   },
+   "values": {
+    "temp_c": 6.1,
+    "dewpt_c": 4.0,
+    "pressure_hpa": 1007.4,
+    "gust_kmh": 9.0,
+    "solar_wm2": 0
+   }
+  }
+ ]
+}

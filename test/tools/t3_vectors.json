@@ -1,0 +1,32 @@
+{
+  "comment": "Present-weather groups of the main airport's METAR -> the T3 phenomena. Shared by test/host/test_t3.inc (the firmware's metarParse + nearFromStore) and tools/t3_score.py (its Python port). Order of the phenomena: snow > rain > drizzle (one), thunder, fog > mist (one).",
+  "current_s": 4500,
+  "near_km": 60,
+  "map": [
+    {"wx": "RASN", "near": ["snow"]},
+    {"wx": "-SN", "near": ["snow"]},
+    {"wx": "BLSN", "near": ["snow"]},
+    {"wx": "-DZ", "near": ["drizzle"]},
+    {"wx": "FZDZ", "near": ["drizzle"]},
+    {"wx": "RA", "near": ["rain"]},
+    {"wx": "SHRA", "near": ["rain"]},
+    {"wx": "FZRA", "near": ["rain"]},
+    {"wx": "RADZ", "near": ["rain"]},
+    {"wx": "TSRA", "near": ["rain", "thunder"]},
+    {"wx": "TS", "near": ["thunder"]},
+    {"wx": "PL", "near": []},
+    {"wx": "GR", "near": []},
+    {"wx": "IC", "near": []},
+    {"wx": "VCTS", "near": []},
+    {"wx": "VCSH", "near": []},
+    {"wx": "RERA", "near": []},
+    {"wx": "BCFG", "near": ["fog"]},
+    {"wx": "FZFG", "near": ["fog"]},
+    {"wx": "MIFG", "near": ["fog"]},
+    {"wx": "BR", "near": ["mist"]},
+    {"wx": "BR -DZ", "near": ["drizzle", "mist"]},
+    {"wx": "FG BR", "near": ["fog"]},
+    {"wx": "HZ", "near": []},
+    {"wx": "NSW", "near": []}
+  ]
+}

@@ -1,0 +1,91 @@
+name: Bug report
+description: Something in fauxcloud does not work as the README says.
+title: "Bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for reporting. Please never post a password, a key, the crash file (it contains your passwords)
+        or the exact location of your station. A security problem goes to the private form instead (see SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What you did, in order. Say if it happens every time.
+      placeholder: |
+        1. Open the dashboard on a phone
+        2. Tap the wind tile
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: fauxcloud version
+      description: Settings → Maintenance shows it, for example "fauxcloud 1.0.0".
+    validations:
+      required: true
+  - type: input
+    id: board
+    attributes:
+      label: Board
+      description: The ESP32 board you run it on.
+      placeholder: ESP32-WROOM-32 DevKit, 4 MB
+    validations:
+      required: true
+  - type: input
+    id: console
+    attributes:
+      label: Weather console
+      description: Brand, model and display firmware (the console's setup page shows the firmware).
+      placeholder: Vevor 7-in-1, YT60234, firmware 1.0.1, 868 MHz
+  - type: checkboxes
+    id: setup
+    attributes:
+      label: What is switched on
+      options:
+        - label: The console uploads through my home network (router DNS override), not fauxcloud's own Wi-Fi
+        - label: MQTT / Home Assistant
+        - label: Online services (forwarding)
+        - label: Airport weather
+        - label: Weather Underground forecast
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      description: Only for a problem with a page.
+      placeholder: Chrome 131 on Android 15
+  - type: textarea
+    id: diag
+    attributes:
+      label: Diagnostics block
+      description: |
+        From a device on your home network, open `http://fauxcloud.local/api/live` (or the board's address with
+        numbers) and copy the `"diag":{...}` part. It holds counters and memory figures. You may replace `sta_ip`
+        and `hostname` with `x` before you paste it.
+      render: json
+  - type: textarea
+    id: bootlog
+    attributes:
+      label: Boot log
+      description: |
+        Settings → Maintenance → Restart → Download the boot log. It shows MAC addresses, IP addresses and station
+        IDs: replace each of them with x before you post it. Paste it here or drop the file in. If Settings says
+        crash data is available, only say so here; do not attach the crash file.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I searched the existing issues for the same problem.
+          required: true
+        - label: This report contains no password, key, crash file or exact location.
+          required: true

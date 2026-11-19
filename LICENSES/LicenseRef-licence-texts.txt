@@ -1,0 +1,8 @@
+These files collect the copyright notices and licence texts of other people's software, reproduced as the
+licences of that software require (the GNU GPL text for fauxcloud itself, the Creative Commons text for the
+documentation, and the notices of the components that fauxcloud's firmware image, web pages and site contain).
+The licence texts and copyright notices reproduced in them are other people's, not fauxcloud's own work.
+The fauxcloud licences (GPL-3.0-or-later, CC BY-SA 4.0, CC0 1.0) do not apply to those reproduced texts and notices:
+each keeps the licence and the copyright holders named in it, and nothing here changes or adds to them. The
+project's own wording in these files (the introductions, the component table, the headers) stays under the
+project's licences.

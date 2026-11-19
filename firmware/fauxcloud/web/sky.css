@@ -1,0 +1,37 @@
+/* sky.css -- the sky effects */
+/* The night's croissant moon in the sun's place, a shimmering star
+   field at night, rain streaks in the top third (data-rain l / m / h from the rate), snow when it rains at <= 1 °C (data-snow).
+   Every face: the attributes sit on <html> beside data-sky; this file is a lazy asset that core.js setSky() links the first time
+   the sky is night or rain (none of it travels in a page's initial bytes). The pictures are three hashed assets (fetched when
+   shown, cached a year), the colours tokens; reduced motion: still. Rain and snow only where the unprefixed mask
+   works (@supports), else the plain sky, and only while data-rain / data-snow say so (empty when the station is stale); the rain layer is the top 40 % only and snow moves in steps (battery); the
+   moon at 88vw, its centre 120 px from the top: just below the top bar, in px (the sky is fixed to the dynamic viewport, so a
+   percentage moved it with a phone's URL bar); 88vw keeps the whole picture on a 375-px screen. The moon is masked like the
+   effects, so it is never drawn under the bar's controls or any glass (a tile scrolled over it hides it); its box is 140 px
+   so the glow is not cut square. The star layer ends where its mask does. Every effect layer and the moon have one more
+   mask layer, --holes: sky.js cuts the glass tiles out of it (opaque until it runs), drawn on the page, so its size --hs in
+   px is the page's (never 100vh: a phone's URL bar) and it is shifted up by the page's scroll, --sy, which sky.js keeps: a
+   scroll moves the mask, never makes a new one (the moon's box: minus its own offset too; the moving rain and snow keep the
+   shift in their keyframes). */
+.sky { --holes: linear-gradient(#000, #000); }
+.sky::before, .sky::after { content: ""; position: absolute; display: none; pointer-events: none; }
+.sky::before { left: calc(88vw - 70px); top: 50px; width: 140px; height: 140px; background: url(/*@asset moon.svg*/) center / 84px no-repeat;
+  mask: var(--holes) calc(70px - 88vw) calc(-50px - var(--sy, 0px)) / var(--hs, 100vw 100vh) no-repeat;
+  filter: drop-shadow(0 0 1.2px var(--moon-g0, transparent)) drop-shadow(0 0 4px var(--moon-g1, rgba(255,255,255,.85))) drop-shadow(0 0 16px var(--moon-g2, rgba(170,200,255,.55))); }
+.sky::after { inset: 0; }
+[data-sky="night"] .sky::before, [data-sky="night"] .sky::after { display: block; }
+[data-sky="night"] .sky::after { bottom: 28%; opacity: var(--stars-o, .9); background: url(/*@asset stars.svg*/) 0 0 / 240px 240px, url(/*@asset stars.svg*/) 97px 53px / 170px 170px;
+  mask: var(--holes) 0 calc(-1 * var(--sy, 0px)) / var(--hs, 100vw 100vh) no-repeat, linear-gradient(#000 42%, transparent); mask-composite: intersect; animation: tw 7s ease-in-out infinite alternate; }
+@keyframes tw { from { opacity: calc(var(--stars-o, .9) * .65); } }
+@supports (mask-size: 1px) {
+[data-rain="l"] .sky::after, [data-rain="m"] .sky::after, [data-rain="h"] .sky::after { display: block; bottom: 60%; opacity: var(--rain-o, .32); background: linear-gradient(var(--rain-c, rgba(220,232,250,.9)) 25%, transparent 90%);
+  mask: var(--holes) 0 calc(-1 * var(--sy, 0px)) / var(--hs, 100vw 100vh) no-repeat, url(/*@asset rain.svg*/) 0 0 / 160px 160px, url(/*@asset rain.svg*/) 40px 20px / 112px 112px; mask-composite: intersect, add;
+  animation: rainfall var(--rain-s, 2.3s) linear infinite; }
+@keyframes rainfall { to { mask-position: 0 calc(-1 * var(--sy, 0px)), 0 160px, 40px 132px; } }
+[data-rain="l"] { --rain-o: .2; --rain-s: 3.2s; } [data-rain="h"] { --rain-o: .45; --rain-s: 1.5s; }
+[data-snow="1"] .sky::after { display: block; bottom: 0; opacity: .7; background: var(--snow-c, #fff); animation: snowfall 15s steps(180) infinite;
+  mask: var(--holes) 0 calc(-1 * var(--sy, 0px)) / var(--hs, 100vw 100vh) no-repeat, url(/*@asset stars.svg*/) 0 0 / 480px 480px, url(/*@asset stars.svg*/) 190px 110px / 340px 340px; mask-composite: intersect, add; }
+@keyframes snowfall { to { mask-position: 0 calc(-1 * var(--sy, 0px)), 0 480px, 190px 450px; } }
+}
+@media (prefers-reduced-motion: reduce) { .sky::after { animation: none !important; } }
+:root[data-theme="light"] { --moon-g0: rgba(70,80,170,.55); --moon-g1: rgba(255,255,255,.9); --moon-g2: rgba(90,100,200,.45); --stars-o: .75; --rain-c: rgba(70,95,130,.85); }

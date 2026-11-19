@@ -1,0 +1,7 @@
+The time-zone data (the IANA time zone database, "tz" or "tzdata", from https://www.iana.org/time-zones) is in the
+public domain. The tzdata LICENSE file, copied unmodified to firmware/fauxcloud/web/data/sources/tzdata/LICENSE,
+says: "Unless specified below, all files in the tz code and data (including this LICENSE file) are in the public
+domain."
+Its one exception, the BSD 3-clause files date.c, newstrftime.3 and strftime.c, is not part of this repository.
+The same applies to the tz-derived part of the data packs fauxcloud builds from these files (tz.json also contains
+the MIT-licensed rules of posix_tz_db).

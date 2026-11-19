@@ -1,0 +1,14 @@
+# Version updates for the workflows' actions only: they are pinned by commit, so Dependabot proposes the new commit
+# (and the tag in the comment) as a pull request. The build tools stay pinned by hand (sketch.yaml, package-lock.json,
+# requirements.txt with hashes).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

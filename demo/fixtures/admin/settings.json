@@ -1,0 +1,1 @@
+{"settings":{"sta_ssid":"DemoNet","sta_pass":"<set>","mqtt_host":"192.168.1.5","mqtt_port":1883,"mqtt_user":"fauxcloud","mqtt_pass":"<set>","ap_pass":"<set>","admin_password":"<set>","hostname":"fauxcloud","setup_done":true},"wifi_change":"","ap_ssid":"fauxcloud-A1B2","sessions":1,"errors":[],"notes":[],"demo":true}

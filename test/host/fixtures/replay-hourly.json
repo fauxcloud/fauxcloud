@@ -1,0 +1,646 @@
+{
+ "station": "ST1",
+ "open": null,
+ "hours": [
+  {
+   "h": "2026-11-12T00:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1016.0,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T01:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1015.5,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T02:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1015.1,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T03:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1014.6,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T04:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1014.2,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T05:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1013.8,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T06:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1013.3,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T07:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1012.9,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T08:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1012.4,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T09:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1012.0,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T10:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1011.5,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T11:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1011.0,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T12:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1010.6,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T13:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1010.1,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T14:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    7.5,
+    8.0,
+    8.5
+   ],
+   "dewpt_c": [
+    null,
+    6.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1009.7,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    40,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T15:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1009.2,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T16:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1008.8,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T17:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1008.4,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T18:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1007.9,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  },
+  {
+   "h": "2026-11-12T19:00Z",
+   "n": 55,
+   "q": [],
+   "temp_c": [
+    5.5,
+    6.0,
+    6.5
+   ],
+   "dewpt_c": [
+    null,
+    4.0,
+    null
+   ],
+   "pressure_hpa": [
+    null,
+    1007.5,
+    null
+   ],
+   "wind_kmh": [
+    null,
+    6.0,
+    null
+   ],
+   "rain_mm": 0.0,
+   "solar_wm2": [
+    null,
+    0,
+    null
+   ],
+   "calm_n": 3
+  }
+ ]
+}

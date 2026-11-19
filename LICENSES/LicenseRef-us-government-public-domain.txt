@@ -1,0 +1,4 @@
+The pressure normals table and the high-ground bitmap are derived from NCEP/NCAR Reanalysis 1 data (long-term
+monthly mean sea-level pressure 1991-2020 and surface height) provided by the NOAA Physical Sciences Laboratory
+(PSL), Boulder, Colorado, USA, from their website at https://psl.noaa.gov. The data are in the public domain.
+NOAA does not endorse fauxcloud, and the table is not official NOAA material.

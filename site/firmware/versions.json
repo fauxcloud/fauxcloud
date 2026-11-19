@@ -1,0 +1,15 @@
+{
+  "_note": "PLACEHOLDER until the first release. The site workflow regenerates this file from the published releases (tools/site_versions.py, site/boards.json + the GitHub Releases API) before the build; a version with url null is listed but cannot be installed. A local preview gets this computer's build with python -I tools/build_site.py --local-firmware.",
+  "boards": {
+    "esp32-wroom-32-4mb": {
+      "label": "ESP32-WROOM-32 DevKit (4 MB)",
+      "chip": "ESP32",
+      "flash_size": "4MB",
+      "photo": "/assets/board-300.jpg",
+      "photo_size": [300, 402],
+      "versions": [
+        {"version": "from the first release", "url": null, "sha256": null, "size": null, "date": null, "prerelease": false}
+      ]
+    }
+  }
+}

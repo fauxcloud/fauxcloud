@@ -1,0 +1,45 @@
+# Neutral capture folder: serial logs, laptop-test logs, coredumps, forecast-trial CSVs (only its README is tracked)
+/captures/*
+!/captures/README.md
+
+# arduino-cli: project-local data/downloads directory (the pinned toolchain lives here, not in git)
+/.arduino/
+/firmware/**/build/
+
+# Compiled firmware
+*.bin
+*.elf
+*.map
+
+# Secrets -- never committed, never echoed (Wi-Fi PSK, MQTT password, OTA password)
+secrets.*
+!secrets.h.example
+*.secret
+/firmware/**/secrets.h
+
+# Python tooling
+.venv/
+__pycache__/
+*.pyc
+
+# Editor / OS noise
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store
+
+# the pinned generator tools (npm ci --ignore-scripts in tools/)
+tools/node_modules/
+
+# the forwarding reference tool's last-send times + redacted request log (tools/fwd_reference.py)
+tools/.fwd_reference_state/
+
+# the pinned Python tools (zopfli) installed beside the asset generator
+tools/.pylib/
+
+# the site build (tools/build_site.py); its sources are in site/
+/site/_build/
+
+# the installer firmware copied from the releases by tools/site_versions.py --mirror (the site workflow); only the
+# placeholder versions.json is tracked
+/site/firmware/*/

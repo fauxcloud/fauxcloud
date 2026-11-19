@@ -1,0 +1,10 @@
+# fauxcloud partition table, PSRAM profile (the WROOM-32 has its own 1.x table, partitions.csv), 4 MB
+# flash: 2 x 1.75 MB OTA app slots, 32 KB coredump, 416 KB LittleFS (104 blocks, two rings) at the end. The PSRAM build
+# uses it in place of partitions.csv (CI copies it over in a temp sketch copy; Arduino takes the sketch's partitions.csv).
+# Name,   Type, SubType,  Offset,   Size,     Flags
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xE000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x1C0000,
+app1,     app,  ota_1,    0x1D0000, 0x1C0000,
+coredump, data, coredump, 0x390000, 0x8000,
+littlefs, data, littlefs, 0x398000, 0x68000,

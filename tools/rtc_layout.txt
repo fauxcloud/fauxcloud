@@ -1,0 +1,16 @@
+# The RTC_NOINIT words of the fauxcloud image (tools/check_rtc_layout.py). An image after an OTA reads them at the
+# addresses it was built with, so they never move. Append-only: grow app::gRtc at its end (app_sys.cpp RtcWords) or add a
+# new symbol after the listed span, then add / update its line here (the check fails until the line holds the new size).
+# Offsets from _rtc_noinit_start.
+#   app::gRtc = {cut[2] @0, clk[2] @8, magic @16, ota_heap @20, boot_no[2] @36, reserved[20] @44} -- cut / clk / magic at
+#   the addresses of the first images that had them; it grew 36 -> 64 B once (a zero reserve); boot_no took the reserve's
+#   first 8 B (an image before it leaves them zero: the next boot reads "no number")
+#   app::gBootLog = src/bootlog.h BootLog: zeroed at every boot, so its content never crosses an OTA; listed so
+#   that nothing new lands between it and gRtc
+#   app::gPrevTail = src/bootlog.h BootPrev: the previous boot's tail, copied at boot (not after a power-on); 2 056 -> 2 060 B
+#   with its trailing `restart` word (magic PREV -> PRV2; rewritten by the running image at every boot)
+# New words: into gRtc's reserve, or after app::gPrevTail.
+start 0x50000200
+app::gRtc 0 64
+app::gBootLog 64 4116
+app::gPrevTail 4180 2060

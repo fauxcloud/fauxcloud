@@ -1,0 +1,107 @@
+# Closes a pull request that links no issue labelled `accepted` (CONTRIBUTING.md: code only for an accepted issue),
+# with one polite comment. It never reopens: the comment asks the author to comment once the issue is accepted, a
+# maintainer reopens, and the `reopened` run checks again. It also runs on every push (`synchronize`), so code pushed to
+# a pull request that started with documentation only is checked too.
+#
+# `pull_request_target` runs in this repository with a write token even for a pull request from a fork, so the job
+# stays harmless by construction: it checks out nothing and runs no shell; the pull request's title, body and file
+# names are read through the API as data and never logged (a logged line can carry a workflow command); the token can
+# only comment on and close pull requests and read issues; any API error fails the job and closes nothing.
+# Exempt: the maintainers (organisation members), a branch of this repository (only people with write access can push
+# one), Dependabot, and a pull request that changes only `docs/`, README.md or CONTRIBUTING.md (CONTRIBUTING.md
+# welcomes those as small pull requests without an issue).
+name: pr-gate
+
+on:
+  pull_request_target:
+    types: [opened, edited, reopened, synchronize]
+
+permissions: {}
+
+# one run at a time per pull request, so a quick second edit sees the first run's comment and does not repeat it
+concurrency:
+  group: pr-gate-${{ github.event.pull_request.number }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    name: Linked to an accepted issue
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      pull-requests: write
+      issues: read
+      contents: none
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3  # v9.0.0
+        with:
+          script: |
+            // Constants pinned by test/tools/test_github_meta.py.
+            const KEYWORD_REF = /\b(?:fix|fixes|fixed|close|closes|closed|resolve|resolves|resolved)\b\s*:?\s*#(\d+)\b/gi;
+            const URL_REF = /\bgithub\.com\/fauxcloud\/fauxcloud\/issues\/(\d+)\b/gi;
+            const EXEMPT_ASSOCIATIONS = ['OWNER', 'MEMBER'];
+            const EXEMPT_LOGINS = ['dependabot[bot]'];
+            const DOCS_PREFIX = 'docs/';
+            const DOCS_ROOT_FILES = ['README.md', 'CONTRIBUTING.md'];
+            const ACCEPTED_LABEL = 'accepted';
+            const MAX_REFS = 10;
+            const MAX_FILES = 3000;
+            const BOT_LOGIN = 'github-actions[bot]';
+            const FIRST_SENTENCE = 'Thanks for the pull request.';
+            const MESSAGE = 'Thanks for the pull request. This project takes code only for an issue the maintainer has labelled `accepted` (see CONTRIBUTING.md): open an issue first, or use the bug report form, and link it here with "Fixes #…" once it is accepted, then comment here and a maintainer will reopen it, or open a new pull request. Forks are always welcome.';
+
+            const pr = context.payload.pull_request;
+            const { owner, repo } = context.repo;
+            const number = pr.number;
+
+            // a run on a closed pull request changes nothing: the gate never reopens
+            if (pr.state !== 'open') {
+              core.info(`#${number} is not open: nothing to do`);
+              return;
+            }
+            // head.repo is null when the fork was deleted
+            const sameRepo = Boolean(pr.head.repo && pr.head.repo.full_name === `${owner}/${repo}`);
+            if (EXEMPT_ASSOCIATIONS.includes(pr.author_association) || EXEMPT_LOGINS.includes(pr.user.login) || sameRepo) {
+              core.info(`#${number}: maintainer, branch of this repository or Dependabot: exempt`);
+              return;
+            }
+
+            // the files API lists at most MAX_FILES; a longer list may hide a non-docs file, so it never counts as docs-only
+            const files = await github.paginate(github.rest.pulls.listFiles, { owner, repo, pull_number: number, per_page: 100 });
+            const isDocs = (path) => path.startsWith(DOCS_PREFIX) || DOCS_ROOT_FILES.includes(path);
+            // a rename out of a code folder lists the old path in previous_filename
+            const docsOnly = files.length > 0 && files.length < MAX_FILES
+              && files.every((f) => isDocs(f.filename) && (!f.previous_filename || isDocs(f.previous_filename)));
+            if (docsOnly) {
+              core.info(`#${number}: ${files.length} documentation files only: exempt`);
+              return;
+            }
+
+            const text = `${pr.title || ''}\n${pr.body || ''}`;
+            const refs = [...text.matchAll(KEYWORD_REF), ...text.matchAll(URL_REF)].map((m) => Number(m[1]));
+            const numbers = [...new Set(refs)].filter((n) => Number.isSafeInteger(n) && n > 0).slice(0, MAX_REFS);
+            for (const n of numbers) {
+              let issue;
+              try {
+                ({ data: issue } = await github.rest.issues.get({ owner, repo, issue_number: n }));
+              } catch (e) {
+                // a number that names no issue is a missing link, not an error: an error would leave the pull request open
+                if (e.status === 404 || e.status === 410) continue;
+                throw e;
+              }
+              // a transferred issue answers from its new repository; a pull request is not an issue
+              const here = issue.number === n && issue.html_url === `https://github.com/${owner}/${repo}/issues/${n}`;
+              const accepted = issue.labels.some((l) => (typeof l === 'string' ? l : l.name) === ACCEPTED_LABEL);
+              if (here && !issue.pull_request && accepted) {
+                core.info(`#${number} links the accepted issue #${n}: pass`);
+                return;
+              }
+            }
+
+            const comments = await github.paginate(github.rest.issues.listComments, { owner, repo, issue_number: number, per_page: 100 });
+            const told = comments.some((c) => c.user && c.user.login === BOT_LOGIN && typeof c.body === 'string' && c.body.startsWith(FIRST_SENTENCE));
+            if (!told) {
+              await github.rest.issues.createComment({ owner, repo, issue_number: number, body: MESSAGE });
+            }
+            await github.rest.pulls.update({ owner, repo, pull_number: number, state: 'closed' });
+            core.info(`#${number} links no accepted issue (${numbers.length} references checked): closed`);

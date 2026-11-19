@@ -1,0 +1,350 @@
+# Compiles every sketch under firmware/ with its own pinned sketch.yaml profile.
+# A green run means "builds from a clean machine with exactly the pinned toolchain".
+name: build
+
+# Third-party actions are pinned by commit (the tag in the comment): release.yml runs this file as its build, so a
+# moved tag must never change a release. Dependabot proposes the updates (.github/dependabot.yml).
+on:
+  # branches only: a release tag is built by release.yml, which runs this whole file, so a tag push builds once
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+  # release.yml calls this whole file, so a release passes exactly the gates of every push; the two inputs only add
+  # the fixed build time and the upload of the release parts, and are empty on a push or a pull request
+  workflow_call:
+    inputs:
+      release:
+        description: "upload the release parts (images, ELFs, bootloader, partition table, boot_app0, flash_args)"
+        type: boolean
+        default: false
+      source_date_epoch:
+        description: "SOURCE_DATE_EPOCH for the compiler: __DATE__/__TIME__ in the image marker become the tag commit's time"
+        type: string
+        default: ""
+    secrets:
+      LEAKGATE_DENY:
+        required: false
+
+# no job writes to the repository; called from release.yml the caller's read-only grant applies anyway
+permissions:
+  contents: read
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # fauxcloud builds without secrets.h (settings live in NVS; secrets.h is an optional dev seed)
+        sketch: [discovery, fauxcloud]
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      # the arduino-cli binary is pinned too (the action alone installs the newest 1.x): the same version as the
+      # local build (firmware/README.md "Toolchain"); bump both together
+      - uses: arduino/setup-arduino-cli@81d310742121c928ea9c8bbd407b4217b432ae02  # v2.0.0 (the v2 branch)
+        with:
+          version: "1.5.1"
+      # set only when release.yml passes it: an empty SOURCE_DATE_EPOCH is a compiler error, so a push run leaves it unset
+      - name: Fixed build time (release calls only)
+        if: inputs.source_date_epoch != ''
+        env:
+          SDE: ${{ inputs.source_date_epoch }}
+        run: |
+          [[ "$SDE" =~ ^[0-9]+$ ]] || { echo "::error::source_date_epoch is not a number"; exit 1; }
+          echo "SOURCE_DATE_EPOCH=$SDE" >> "$GITHUB_ENV"
+      # the same -fno-exceptions property and .eh_frame guard as tools/build.ps1 (see the comment there: the core's
+      # cpp_flags file adds -fexceptions after compiler.cpp.extra_flags, so the flag rides in build.extra_flags)
+      - name: Compile ${{ matrix.sketch }} (pinned profile, no exceptions)
+        run: |
+          arduino-cli --config-file arduino-cli.yaml compile \
+            --export-binaries --warnings all \
+            --build-property 'build.extra_flags=-DARDUINO_HOST_OS="{runtime.os}" -DARDUINO_FQBN="{build.fqbn}" -DESP32=ESP32 -DCORE_DEBUG_LEVEL={build.code_debug} {build.loop_core} {build.event_core} {build.defines} {build.extra_flags.{build.mcu}} {build.zigbee_mode} {build.matter_mode} -fno-exceptions' \
+            --build-path firmware/${{ matrix.sketch }}/build \
+            firmware/${{ matrix.sketch }}
+      - name: No-exceptions guard (.eh_frame <= 8192 B, no .gcc_except_table)
+        run: |
+          readelf=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-readelf | head -1)
+          elf=$(ls firmware/${{ matrix.sketch }}/build/*.ino.elf | head -1)
+          # the section's size column (hex) after the "[NN]" index, which "[ 9]" splits in two (mawk: no strtonum)
+          sz() { "$readelf" -S -W "$elf" | sed 's/^ *\[ *[0-9]*\] *//' | awk -v s="$1" '$1==s{print $5}' | head -1; }
+          eh=$(sz .eh_frame); gx=$(sz .gcc_except_table)
+          eh=$((16#${eh:-0})); gx=$((16#${gx:-0}))
+          echo ".eh_frame $eh B (max 8192), .gcc_except_table $gx B (must be 0)"
+          [ "$eh" -le 8192 ] && [ "$gx" -eq 0 ]
+      # the two tables' static check and the frozen 1.x table's hash gate (tools/check_partitions.py)
+      - name: Partition tables (static check, the 1.x table hash gate)
+        if: matrix.sketch == 'fauxcloud'
+        run: python3 -I tools/check_partitions.py
+      # the image against the app slots of the sketch's partitions.csv -- app0 and app1 the same
+      # size, fail above it, a warning at 95 % (1 805 517 B for 0x1D0000); the same lines as tools/build.ps1
+      - name: App image vs the app slots (fail above them, warn at 95 %)
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          bin=$(ls firmware/fauxcloud/build/*.ino.bin | head -1)
+          size=$(stat -c %s "$bin")
+          slot=$(awk -F, '$1 ~ /^ *app0 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions.csv)
+          slot1=$(awk -F, '$1 ~ /^ *app1 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions.csv)
+          slot=$((slot)); slot1=$((slot1))
+          [ "$slot" -eq "$slot1" ] || { echo "::error::app0 ($slot B) and app1 ($slot1 B) differ"; exit 1; }
+          warn=$(( (slot * 95 + 99) / 100 ))
+          echo "app image $size B of the app0 slot $slot B (warning at $warn B)"
+          [ "$size" -le "$slot" ] || { echo "::error::app image ($size B) does not fit the app0 slot ($slot B)"; exit 1; }
+          [ "$size" -lt "$warn" ] || echo "::warning::app image at or above 95% of the app0 slot ($warn B)"
+      - name: RTC layout (the RTC_NOINIT words never move between images; tools/rtc_layout.txt)
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1)
+          python3 -I tools/check_rtc_layout.py --nm "$nm" --elf "$(ls firmware/fauxcloud/build/*.ino.elf | head -1)"
+      # a negative check is never written as `! nm … | grep …`. Under GitHub's `bash -e` a pipeline
+      # negated with `!` never stops the step (bash: errexit ignores an inverted status), so only a block's last line would
+      # count. Each negative check is `if hit PATTERN "$syms"; then echo "::error::…"; exit 1; fi` on nm's output captured
+      # first: `nm | grep -q` under pipefail could read a SIGPIPE'd nm as "no match". `set -o pipefail` makes a failing nm
+      # fail the step.
+      # the release is the TLS build (FWD_TLS=1 is the default in
+      # src/fwd.h): HTTPS forwarding and airport weather. BearSSL is the only outbound TLS path and never allocates; our
+      # objects reference no core TLS client (esp_mqtt still pulls esp_tls in: only our objects are checked); the trust
+      # anchors and the TAF parser are in the image, so a build that silently lost TLS fails here
+      - name: Release is the TLS build (BearSSL never allocates, no core TLS client in our objects, anchors + airport weather present)
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          set -o pipefail
+          hit() { grep -qE "$1" <<< "$2"; }
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1)
+          elf=$(ls firmware/fauxcloud/build/*.ino.elf | head -1)
+          b=firmware/fauxcloud/build/sketch
+          test "$(ls $b/src/bearssl/*.o | wc -l)" -eq 57  # an empty glob must not pass the check below
+          und=$("$nm" -u $b/src/bearssl/*.o)
+          if hit ' (malloc|calloc|realloc|free)$' "$und"; then echo "::error::BearSSL objects reference the heap"; exit 1; fi
+          und=$("$nm" -u $b/app_fwd.cpp.o $b/src/tlsc.cpp.o)
+          if hit 'esp_tls|mbedtls|x509_crt' "$und"; then echo "::error::our objects reference a core TLS client"; exit 1; fi
+          syms=$("$nm" -C "$elf")
+          if ! hit 'FWD_TAS|FWD_ROOTS' "$syms"; then echo "::error::no trust anchors in the release image"; exit 1; fi
+          if ! hit 'fc::TafParser' "$syms"; then echo "::error::no airport weather (TAF parser) in the release image"; exit 1; fi
+      # the HTTP-only fallback (FWD_TLS=0), a CI cell, not a download: plain HTTP only -- no BearSSL
+      # symbol, no anchors, no airport weather (the one web asset table is shared by both builds, so the lazy sheet's gzip
+      # blob ADMIN_METAR_JS_GZ is there, unused: its tile hides without the route; likewise the dashboard view's
+      # DASH_AIRPORT_JS_GZ, whose plane tab never shows without the bridge's `metar` flag); the same app0 slot gate
+      - name: HTTP-only fallback (FWD_TLS=0) compiles, links no TLS and no airport weather, fits the app0 slot
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          arduino-cli --config-file arduino-cli.yaml compile --warnings all             --build-property 'build.extra_flags=-DARDUINO_HOST_OS="{runtime.os}" -DARDUINO_FQBN="{build.fqbn}" -DESP32=ESP32 -DCORE_DEBUG_LEVEL={build.code_debug} {build.loop_core} {build.event_core} {build.defines} {build.extra_flags.{build.mcu}} {build.zigbee_mode} {build.matter_mode} -fno-exceptions -DFWD_TLS=0'             --build-path firmware/fauxcloud/build/http             firmware/fauxcloud
+          set -o pipefail
+          hit() { grep -qE "$1" <<< "$2"; }
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1)
+          elf=firmware/fauxcloud/build/http/fauxcloud.ino.elf
+          test -f "$elf"
+          und=$("$nm" -u firmware/fauxcloud/build/http/sketch/app_fwd.cpp.o firmware/fauxcloud/build/http/sketch/src/tlsc.cpp.o)
+          if hit 'esp_tls|mbedtls|x509_crt' "$und"; then echo "::error::the HTTP-only objects reference a core TLS client"; exit 1; fi
+          raw=$("$nm" "$elf"); syms=$("$nm" -C "$elf")
+          if hit ' br_' "$raw"; then echo "::error::BearSSL symbols in the HTTP-only image"; exit 1; fi
+          if hit 'FWD_TAS|FWD_ROOTS' "$syms"; then echo "::error::trust anchors in the HTTP-only image"; exit 1; fi
+          wx=$(grep -iE 'metar|airport|fc::taf|wufcsched|startwufc|onwufc|wufcrunheld' <<< "$syms" | grep -v -E 'ADMIN_METAR_JS_GZ|DASH_AIRPORT_JS_GZ' || true)  # + the WU forecast job
+          if [ -n "$wx" ]; then echo "::error::airport weather code in the HTTP-only image"; echo "$wx" | head -5; exit 1; fi
+          s=$(stat -c %s firmware/fauxcloud/build/http/fauxcloud.ino.bin); slot=$(($(awk -F, '$1 ~ /^ *app0 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions.csv))); warn=$(( (slot * 95 + 99) / 100 ))
+          echo "HTTP-only image $s B of the app0 slot $slot B (warning at $warn B)"
+          [ "$s" -le "$slot" ] || { echo "::error::HTTP-only image ($s B) does not fit the app0 slot ($slot B)"; exit 1; }
+          [ "$s" -lt "$warn" ] || echo "::warning::HTTP-only image at or above 95% of the app0 slot ($warn B)"
+      # the WROOM images (the TLS release in build/, the HTTP-only fallback in
+      # build/http) carry no bench diagnostic -- no bench symbol in the ELF, no bench key string in the .bin, no task snapshot
+      # from app_mqtt.cpp.o. A missing file fails (tools/check_diag_bench.py never passes on nothing read)
+      - name: No bench diagnostics in the WROOM images (FC_DIAG_BENCH=0)
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1)
+          for b in firmware/fauxcloud/build firmware/fauxcloud/build/http; do
+            python3 -I tools/check_diag_bench.py --nm "$nm" --elf "$b/fauxcloud.ino.elf" --bin "$b/fauxcloud.ino.bin" --obj "$b/sketch/app_mqtt.cpp.o" --expect absent
+          done
+      # the PSRAM profile's placeholder (FC_MAX_STATIONS=2 with TLS) compiles -- on the PSRAM board option, which
+      # defines BOARD_HAS_PSRAM; without it profile.h's heap assert refuses two stations (the WROOM-32 carries one).
+      # it is also the bench-diagnostics cell (FC_DIAG_BENCH=1), and its object must reference the snapshot.
+      # the PSRAM profile has its own table (partitions-psram.csv; RING_SLOTS 2): Arduino takes the sketch
+      # folder's partitions.csv, so the cell builds a copy of the sketch with partitions-psram.csv over it
+      - name: PSRAM placeholder (FC_MAX_STATIONS=2, FWD_TLS=1, FC_DIAG_BENCH=1, PSRAM=enabled, partitions-psram.csv) compiles
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          set -o pipefail
+          rm -rf /tmp/psram && mkdir -p /tmp/psram && cp -r firmware/fauxcloud /tmp/psram/fauxcloud && rm -rf /tmp/psram/fauxcloud/build
+          cp firmware/fauxcloud/partitions-psram.csv /tmp/psram/fauxcloud/partitions.csv
+          arduino-cli --config-file arduino-cli.yaml compile --fqbn 'esp32:esp32:esp32:PartitionScheme=custom,PSRAM=enabled' --warnings all             --build-property 'build.extra_flags=-DARDUINO_HOST_OS="{runtime.os}" -DARDUINO_FQBN="{build.fqbn}" -DESP32=ESP32 -DCORE_DEBUG_LEVEL={build.code_debug} {build.loop_core} {build.event_core} {build.defines} {build.extra_flags.{build.mcu}} {build.zigbee_mode} {build.matter_mode} -fno-exceptions -DFWD_TLS=1 -DFC_MAX_STATIONS=2 -DFC_DIAG_BENCH=1'             --build-path firmware/fauxcloud/build/psram             /tmp/psram/fauxcloud
+          b=firmware/fauxcloud/build/psram
+          python3 -I tools/check_diag_bench.py --nm "$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1)" \
+            --elf "$b/fauxcloud.ino.elf" --bin "$b/fauxcloud.ino.bin" --obj "$b/sketch/app_mqtt.cpp.o" --expect present
+          # the same slot check as the release image, against the PSRAM table's own slot (0x1C0000)
+          s=$(stat -c %s firmware/fauxcloud/build/psram/fauxcloud.ino.bin); slot=$(($(awk -F, '$1 ~ /^ *app0 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions-psram.csv))); echo "PSRAM image $s B of the app0 slot $slot B"; [ "$s" -le "$slot" ] || { echo "::error::PSRAM image ($s B) does not fit the app0 slot ($slot B)"; exit 1; }
+      # the diagnostic image published next to every release (FWD_TLS=1, FC_DIAG_BENCH=1,
+      # the WROOM-32 option, one station): "+diag" in its version; installs through the admin OTA page like any image
+      - name: Diag image (FWD_TLS=1, FC_DIAG_BENCH=1) -> fauxcloud-<ver>-diag.bin
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          arduino-cli --config-file arduino-cli.yaml compile --warnings all             --build-property 'build.extra_flags=-DARDUINO_HOST_OS="{runtime.os}" -DARDUINO_FQBN="{build.fqbn}" -DESP32=ESP32 -DCORE_DEBUG_LEVEL={build.code_debug} {build.loop_core} {build.event_core} {build.defines} {build.extra_flags.{build.mcu}} {build.zigbee_mode} {build.matter_mode} -fno-exceptions -DFWD_TLS=1 -DFC_DIAG_BENCH=1'             --build-path firmware/fauxcloud/build/diag             firmware/fauxcloud
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1); b=firmware/fauxcloud/build/diag
+          python3 -I tools/check_diag_bench.py --nm "$nm" --elf "$b/fauxcloud.ino.elf" --bin "$b/fauxcloud.ino.bin" \
+            --obj "$b/sketch/app_mqtt.cpp.o" --expect present
+          grep -a -q 'FAUXCLOUD-IMAGE:[0-9a-z.-]*+diag ' "$b/fauxcloud.ino.bin" || { echo "::error::the diag image does not say +diag"; exit 1; }
+          s=$(stat -c %s "$b/fauxcloud.ino.bin"); slot=$(($(awk -F, '$1 ~ /^ *app0 *$/ {gsub(/ /, "", $5); print $5}' firmware/fauxcloud/partitions.csv))); echo "diag image $s B of the app0 slot $slot B"; [ "$s" -le "$slot" ] || { echo "::error::diag image ($s B) does not fit the app0 slot ($slot B)"; exit 1; }
+          ver=$(sed -n 's/^#define FC_VERSION_BASE "\(.*\)".*/\1/p' firmware/fauxcloud/app.h)
+          mkdir -p firmware/fauxcloud/build/diag-out && cp "$b/fauxcloud.ino.bin" "firmware/fauxcloud/build/diag-out/fauxcloud-$ver-diag.bin"
+      # the negative check must be able to bite -- run in "absent" mode on the bench image, it has to fail
+      - name: Self-test of the release check (fails on the diag image)
+        if: matrix.sketch == 'fauxcloud'
+        run: |
+          nm=$(ls .arduino/data/internal/*/bin/xtensa-esp32-elf-nm | head -1); b=firmware/fauxcloud/build/diag
+          if python3 -I tools/check_diag_bench.py --nm "$nm" --elf "$b/fauxcloud.ino.elf" --bin "$b/fauxcloud.ino.bin" \
+               --obj "$b/sketch/app_mqtt.cpp.o" --expect absent; then
+            echo "::error::the release check passed on the diag image: it cannot bite"; exit 1
+          fi
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        if: matrix.sketch == 'fauxcloud'
+        with:
+          name: fauxcloud-diag-bin
+          path: firmware/fauxcloud/build/diag-out/*.bin
+          if-no-files-found: error
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: ${{ matrix.sketch }}-bin
+          path: firmware/${{ matrix.sketch }}/build/*.bin
+          if-no-files-found: warn
+      # release calls only: the files tools/release_assets.py turns into the release assets, by name -- never the
+      # core's fauxcloud.ino.merged.bin (padded to the whole flash: written at 0x0 it erases the settings)
+      - name: Release parts (release calls only)
+        if: inputs.release && matrix.sketch == 'fauxcloud'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: fauxcloud-release-parts
+          path: |
+            firmware/fauxcloud/build/fauxcloud.ino.bin
+            firmware/fauxcloud/build/fauxcloud.ino.elf
+            firmware/fauxcloud/build/fauxcloud.ino.bootloader.bin
+            firmware/fauxcloud/build/fauxcloud.ino.partitions.bin
+            firmware/fauxcloud/build/boot_app0.bin
+            firmware/fauxcloud/build/flash_args
+            firmware/fauxcloud/build/diag/fauxcloud.ino.bin
+            firmware/fauxcloud/build/diag/fauxcloud.ino.elf
+          if-no-files-found: error
+          retention-days: 7
+
+  # The data packs must match their vendored sources, the pages and assets baked into
+  # firmware/fauxcloud/src/web_assets.h must match firmware/fauxcloud/web/.
+  web-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      # the web assets: the generator runs terser (pinned in tools/package-lock.json) through node
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+        with:
+          node-version: "20"
+      - name: Pinned generator tools (terser), no install scripts
+        run: npm ci --ignore-scripts
+        working-directory: tools
+      # zopfli for the gzip bytes, hash-pinned (tools/requirements.txt), installed beside the generator (tools/.pylib)
+      - name: Pinned generator tools (zopfli), hashes required
+        run: |
+          python -m pip install --require-hashes --only-binary :all: --target tools/.pylib -r tools/requirements.txt
+      - name: Data packs match the vendored sources
+        run: python -I tools/gen_tz_flags.py --check
+      - name: Generated header is up to date (byte-identical to a local run)
+        run: python -I tools/gen_web_assets.py --check && sha256sum firmware/fauxcloud/src/web_assets.h
+      - name: Asset generator tests (lazy map, budgets, terser), C++ / JS table sync, the site build and the demo bar's words
+        run: python -I -m unittest discover -s test/tools
+      # the /try/ demo is the dashboard a board of this commit serves plus one script tag per shell: a drift fails here
+      - name: The /try/ demo's shells and assets are the firmware's bytes (site build check)
+        run: python -I tools/build_site.py --check
+      - name: The demo data's replay (demo/replay.js against the committed snapshots)
+        run: node test/tools/demo_vectors.js
+      - name: The site installer's vectors (states, zip + parts.json, the NVS guard, MD5, the setup Wi-Fi QR)
+        run: node test/tools/install_vectors.js
+      - name: The login crypto in the pages matches the device vectors
+        run: node test/tools/crypto_vectors.js
+      - name: The dashboard's pressure and temperature trend
+        run: node test/tools/tendency_vectors.js
+      - name: The outlook strip's words and glyphs cover every firmware code
+        run: node test/tools/outlook_vectors.js
+      - name: Learning sheet render (admin-learn.js)
+        run: node test/tools/learn_vectors.js
+      - name: Shared formatters of core.js (uptime), beaufort() and offSince()
+        run: node test/tools/format_vectors.js
+      - name: The dashboard's words as rendered (Details labels, chips, offline line)
+        run: node test/tools/text_vectors.js
+      - name: core.js requests (lazy 404 is an error, JSON 404 is data, asset cache)
+        run: node test/tools/core_vectors.js
+      - name: Online services sheet render (admin-fwd.js) and the greyed-out targets
+        run: node test/tools/fwd_vectors.js
+      - name: METAR sheet vectors
+        run: node test/tools/metar_vectors.js
+      - name: tz.json columns round trip in the picker
+        run: node test/tools/tz_vectors.js
+      - name: Airport view vectors (dash-airport.js)
+        run: node test/tools/airport_vectors.js
+      - name: Range sheet vectors
+        run: node test/tools/range_vectors.js
+      - name: Sheet range summary vectors (web/dash-sheet.js rangeStats)
+        run: node test/tools/sheet_vectors.js
+      - name: Sky cut-outs (web/sky.js)
+        run: node test/tools/sky_vectors.js
+      - name: Outlook page 2 and the WU forecast lines (web/dash-wufc.js)
+        run: node test/tools/wufc_vectors.js
+      - name: Setup's subnet check (web/setup.js)
+        run: node test/tools/setup_vectors.js
+      - name: the dashboard's language runtime and the pseudo language (web/lang.js)
+        run: node test/tools/i18n_vectors.js
+      - name: Forwarding roots and host vectors are up to date (the vectors are rendered by tools/fwd_reference.py)
+        run: python -I tools/gen_fwd_roots.py --check && python -I test/tools/gen_fwd_vectors.py --check
+      - name: Vendored BearSSL matches its manifest (LF bytes, .gitattributes -text)
+        run: python -I tools/vendor_bearssl.py --check
+
+  # The leak gate: every tracked file is classified by tools/publish-manifest.txt and the published files pass the
+  # public rules (tools/leakgate.py). The private deny-list comes from the LEAKGATE_DENY secret when the repository has
+  # it; a pull request from a fork gets no secrets and runs the public rules only. Blocking, block tags included
+  # (--strict-tags): a hit fails the run.
+  leakgate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Leak gate (manifest, public rules, deny-list when the secret exists)
+        env:
+          LEAKGATE_DENY: ${{ secrets.LEAKGATE_DENY }}
+        run: |
+          [ -n "$LEAKGATE_DENY" ] || echo "::notice::LEAKGATE_DENY is not set here: public rules only"
+          python -I tools/leakgate.py --manifest tools/publish-manifest.txt --strict-tags --github --summary-only \
+            || { echo "::error::LEAK GATE FAILED: see the job summary"; exit 1; }
+
+  # REUSE compliance (https://reuse.software): every file has a licence and a copyright line (REUSE.toml) and every
+  # licence in use has its text in LICENSES/. Blocking. The tool and its whole dependency tree are hash-locked in
+  # tools/requirements-reuse.txt (the same --require-hashes install as the other jobs); bump them deliberately.
+  reuse:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+        with:
+          python-version: "3.12"
+      - name: Install reuse (hash-locked, wheels only)
+        run: |
+          python -m pip install --disable-pip-version-check --require-hashes --only-binary :all: -r tools/requirements-reuse.txt
+      - name: reuse lint
+        run: reuse lint
+
+  # Plain C++ logic of firmware/fauxcloud/src, no board, no network.
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          persist-credentials: false
+      - name: g++ host tests
+        run: sh test/host/run.sh

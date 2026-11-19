@@ -1,0 +1,62 @@
+# leakgate-allow.txt -- known false positives of the leak gate's line rules (tools/leakgate.py).
+#
+# Format: `CLASS REGEX @ PATH-GLOB`, one per line, `#` comment lines (the path glob may be left out for `tag` only).
+# A hit of CLASS is dropped when REGEX matches a span of the same line that covers the hit and the file matches
+# PATH-GLOB. Allowed classes: path, dnum, tag, owner-note, polish, lan, mac, coords, home-path. Deny-list hits are
+# never allowed here: owner data is fixed in the file, not waived. Keep every line narrow and say why above it.
+
+# vendored BearSSL keeps upstream's bytes (its manifest hashes them): short variable names in its comments look like tags
+tag .+ @ firmware/fauxcloud/src/bearssl/**
+tag .+ @ test/host/bearssl/**
+
+# Python's standard `secrets` module, not a secrets file
+path \bsecrets\.(?:token_hex|token_urlsafe|token_bytes|compare_digest|choice)\b @ **/*.py
+
+# a GitHub Actions expression that reads a repository secret, not a secrets file
+path \$\{\{[^}]*\bsecrets\.[A-Za-z_][A-Za-z0-9_]*\b @ .github/workflows/*.yml
+
+# the serial-capture and coredump tools write to (and read from) the gitignored `captures` working folder of the user's own
+# checkout by default: a working folder name, not a pointer to private files
+path captures[/\\] @ tools/capture.ps1
+path captures[/\\] @ tools/decode-coredump.ps1
+
+# the ESP-IDF default soft-AP address: what the discovery sketch listens on, and what the product's own AP avoids
+lan 192\.168\.4\.1 @ firmware/README.md
+lan 192\.168\.4\.1 @ firmware/fauxcloud/app_core.cpp
+lan 192\.168\.4\.1 @ firmware/fauxcloud/app_net.cpp
+lan 192\.168\.4\.1 @ tools/laptop-test.ps1
+
+# the whole 192.168 private range as one /16 network: the home network wider than /24 that the setup check warns about
+lan 192\.168\.0\.0/16 @ firmware/fauxcloud/web/setup.js
+lan 192\.168\.0\.0/16 @ docs/api.md
+
+# the subnet check's own vectors: synthetic networks wider than the documented ones are the point of the test
+lan (?:192\.168|10\.[0-9]+|172\.(?:1[6-9]|2[0-9]|3[01]))\.[0-9.xX*]+ @ test/tools/setup_vectors.js
+
+# the slug and search folds map the one Latin letter NFD does not decompose (U+0142) to "l": functional code
+polish \.replace\(/\u0142/g, 'l'\) @ firmware/fauxcloud/web/adminface.js
+polish \.replace\(/\u0142/g, 'l'\) @ firmware/fauxcloud/web/picker.js
+
+# UTF-8 test strings: the folding, the UTF-8 cut and the non-ASCII passphrase are what these tests check
+polish "Jard\u00edn Pe\u00f1\u00f3n \u2013 suelo" @ test/host/test_fauxcloud.cpp
+polish Za[^"\\]* lotnisko @ test/host/test_metar_sched.inc
+polish 'correct horse battery staple \u017c' @ test/tools/crypto_vectors.js
+
+# the public example point (a city centre, no address) of the /try/ demo and the API examples, and a far-away test value
+coords \b(?:lat|lon)"\s*:\s*-?[0-9]+\.[0-9]+ @ demo/fixtures/**/*.json
+coords \b(?:lat|lon)"\s*:\s*-?[0-9]+\.[0-9]+ @ docs/api.md
+coords \bLON = -?[0-9]+\.[0-9]+ @ tools/demo_data.py
+coords \b(?:lat|lon) = -?[0-9]+\.[0-9]+ @ test/host/test_fwd.inc
+
+# the forecast-trial tools keep their data in the gitignored `captures` working folder of the user's own checkout
+path captures[/\\]forecast-trial @ tools/forecast_trial.py
+path captures[/\\]forecast-trial @ tools/t3_score.py
+path captures[/\\]forecast-trial @ tools/taf_disagree.py
+
+# the forwarding reference tool reads the user's own keys file from their home folder, outside the repository
+path \bsecrets\.forwarding\.json\b @ tools/fwd_reference.py
+
+# the vendored esptool-js bundle (site/SOURCES.md, upstream bytes): an Espressif chip name and the base64 images of its
+# flasher stubs, whose letter-digit pairs look like a decision number or a block tag
+dnum ESP32-PICO-D[4] @ **/assets/esptool-bundle.js
+tag [A-Za-z0-9+/=]{40,} @ **/assets/esptool-bundle.js

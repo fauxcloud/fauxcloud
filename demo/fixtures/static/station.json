@@ -1,0 +1,1 @@
+{"station":"DEMO1","configured":true,"stored":true,"effective":{"name":"Garden","profile":"yt60234","publish":true,"stale_s":240,"limits":{},"jumps":{},"calib":{"temp_c_offset":0,"humidity_offset":0,"pressure_hpa_offset":0,"wind_dir_offset":0,"rain_factor":1,"wind_factor":1},"disabled":[],"hist":[],"promote":{}},"overrides":{"name":"Garden"}}

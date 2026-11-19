@@ -1,0 +1,5 @@
+These files contain public certificate-authority certificates, taken unmodified from their authorities' own
+publications (tools/fwd_roots.pem names each one and pins it by its SHA-256 fingerprint), and tables generated from
+them (the subject name and the public key). The authorities publish them so that software can check encrypted
+connections against them; no licence text accompanies them.
+The fauxcloud licences do not apply to the certificates themselves.

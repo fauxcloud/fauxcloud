@@ -1,0 +1,12 @@
+# arduino-cli build profile -- the pinned toolchain for this sketch.
+# Build:  arduino-cli compile --profile esp32dev firmware/discovery   (or tools/build.ps1 discovery)
+# The platform version below is the ONE place the core version is pinned. Bump it deliberately.
+# Pinned 2026-11-01 to 3.3.12 = the newest release in the index that day (line 3.3.x, no 3.4 yet).
+profiles:
+  esp32dev:
+    fqbn: esp32:esp32:esp32
+    platforms:
+      - platform: esp32:esp32 (3.3.12)
+        platform_index_url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+    libraries: []
+default_profile: esp32dev

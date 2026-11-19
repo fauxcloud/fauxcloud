@@ -1,0 +1,10 @@
+# fauxcloud partition table, WROOM-32 (one station, one ring), 4 MB flash: 2 x 1.81 MB OTA app
+# slots, 40 KB coredump, 280 KB LittleFS (70 blocks, one ring) at the end. FROZEN for all of 1.x (CI hash gate:
+# partitions.csv.sha256): a new table is a new board profile. The PSRAM profile has its own: partitions-psram.csv.
+# Name,   Type, SubType,  Offset,   Size,     Flags
+nvs,      data, nvs,      0x9000,   0x5000,
+otadata,  data, ota,      0xE000,   0x2000,
+app0,     app,  ota_0,    0x10000,  0x1D0000,
+app1,     app,  ota_1,    0x1E0000, 0x1D0000,
+coredump, data, coredump, 0x3B0000, 0xA000,
+littlefs, data, littlefs, 0x3BA000, 0x46000,

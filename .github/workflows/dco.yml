@@ -1,0 +1,57 @@
+# Developer Certificate of Origin: every commit of a pull request carries a "Signed-off-by:" trailer with its author's
+# e-mail address (`git commit -s` writes it). A plain git check, no third-party app; it reads the pull request's
+# commits only and needs no secret, so it runs the same for a pull request from a fork.
+# GitHub's own bots are exempt, and only on a pull request the bot itself opened: Dependabot signs off as
+# `dependabot[bot] <support@github.com>`, which matches neither its author nor its committer address, so a
+# committer-match rule would not help; the pull request's opener cannot be set by a contributor, while a commit's
+# author address can, so the exemption needs both the opener and the bot's own author address.
+name: dco
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  dco:
+    name: DCO sign-off
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Every commit is signed off by its author
+        env:
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+          PR_USER: ${{ github.event.pull_request.user.login }}
+        run: |
+          set -o pipefail
+          case "$PR_USER" in
+            "dependabot[bot]") bot="49699333+dependabot[bot]@users.noreply.github.com" ;;
+            "github-actions[bot]") bot="41898282+github-actions[bot]@users.noreply.github.com" ;;
+            *) bot="" ;;
+          esac
+          commits=$(git rev-list --no-merges "$BASE..$HEAD")
+          [ -n "$commits" ] || { echo "::error::no commits between the base and the head of this pull request"; exit 1; }
+          bad=0
+          for c in $commits; do
+            email=$(git log -1 --format=%ae "$c")
+            sob=$(git log -1 --format=%B "$c" | git interpret-trailers --parse | grep -i '^Signed-off-by:' || true)
+            # only the short hash is printed: a commit subject is the contributor's text and could fake an annotation
+            if [ -n "$bot" ] && [ "$email" = "$bot" ]; then
+              echo "ok  $(git log -1 --format=%h "$c") (opened and authored by $PR_USER: exempt)"
+            elif [ -n "$email" ] && [[ "${sob,,}" == *"<${email,,}>"* ]]; then
+              echo "ok  $(git log -1 --format=%h "$c")"
+            else
+              echo "::error::commit $(git log -1 --format=%h "$c") has no Signed-off-by line with its author's e-mail address"
+              bad=1
+            fi
+          done
+          if [ "$bad" -ne 0 ]; then
+            echo "Sign each commit with 'git commit -s' (to fix a branch: git rebase --signoff $BASE, then push with --force-with-lease)." \
+              | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi

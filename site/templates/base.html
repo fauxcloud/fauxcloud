@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{title}}</title>
+<meta name="description" content="{{description}}">
+<link rel="canonical" href="{{url}}">
+{{og}}
+<meta name="theme-color" content="#0c1430">
+<!-- dark by default; a light choice kept in fc-theme is painted before the stylesheet lands -->
+<script>document.documentElement.classList.add('js');try{if(localStorage.getItem('fc-theme')==='light')document.documentElement.dataset.theme='light'}catch(e){}</script>
+<link rel="stylesheet" href="{{css}}">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<script src="{{js}}" defer></script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+<div class="sky" aria-hidden="true"></div>
+{{sprite}}
+<div class="wrap">
+<header class="bar glass">
+  <a class="brand" href="/" aria-label="fauxcloud home"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg><svg class="wm" viewBox="3 -712 4389 721" aria-hidden="true"><use href="#wm" x="3" y="-712" width="4389" height="721"/></svg></a>
+  <nav class="nav" aria-label="Main">{{nav}}</nav>
+  <details class="menu"><summary>Menu</summary>
+    <nav aria-label="Main">{{nav}}</nav>
+  </details>
+  <button class="tbtn" id="theme" type="button" aria-label="Switch between light and dark"><svg aria-hidden="true"><use href="#i-sun"/></svg></button>
+</header>
+
+{{main}}
+
+<footer>
+  <div class="fgrid">
+    <div>
+      <a class="brand" href="/" aria-label="fauxcloud home"><svg class="mk" aria-hidden="true"><use href="#mark"/></svg><svg class="wm" viewBox="3 -712 4389 721" aria-hidden="true"><use href="#wm" x="3" y="-712" width="4389" height="721"/></svg></a>
+      <p class="ftag">local weather bridge for Wi-Fi weather stations</p>
+      <p style="margin-top:12px">Free software under GPL-3.0-or-later, provided as is, without warranty of any kind; you flash and run it at your own risk. The documentation is under CC BY-SA 4.0. Made by the fauxcloud project.</p>
+      <p>fauxcloud is developed by one maintainer with AI assistance (Claude Code). Every change is reviewed, covered by tests and verified on real hardware before release. If the project stops being maintained it will be archived; forks are welcome.</p>
+      <p>Independent open-source project, not affiliated with or endorsed by any company or service named on this site. All product and service names are trademarks of their owners and are used only to describe compatibility.</p>
+    </div>
+    <nav class="flinks" aria-label="Footer"><a href="/docs/all-pages/">All pages</a><a href="/docs/security/">Security</a><a href="/docs/contributing/">Contributing</a><a href="/docs/changelog/">Changelog</a><a href="https://github.com/fauxcloud/fauxcloud/blob/main/COPYRIGHT.md">Licences and credits</a><a href="/third-party-notices.txt">Third-party notices</a><a href="https://github.com/fauxcloud/fauxcloud">GitHub</a></nav>
+  </div>
+</footer>
+</div>
+</body>
+</html>

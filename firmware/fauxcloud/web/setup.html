@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en" class="f-setup">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>fauxcloud setup</title>
+<link rel="icon" type="image/svg+xml" href="/*@asset favicon.svg*/">
+<link rel="apple-touch-icon" href="/*@asset touch-icon.png*/">
+<meta name="theme-color" content="#14366a">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<!-- the setup face: one self-contained page (a captive mini-browser should need one request); the location picker's data packs load from /a/ when step 2 opens -->
+<style>/*@css setup*/</style>
+</head>
+<body>
+<div class="sky" aria-hidden="true"></div>
+<div class="wrap">
+  <header class="top">
+    <span class="brand"><svg class="mark" viewBox="0 0 256 256" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"><path d="M62 180C41 180 26 164 26 144C26 124 41 108 62 106C67 76 90 55 119 55C148 55 170 74 176 101C183 97 190 95 197 95"/><path d="M216 116C225 124 230 135 230 147C230 166 214 180 194 180H62"/><path d="M78 141C100 128 119 128 136 138C151 147 167 147 182 138" stroke-width="17"/></g></svg>fauxcloud <span class="what">Setup</span></span>
+    <span class="steps" id="dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+  </header>
+
+  <main class="glass card" id="card"><p class="lead">Loading…</p></main>
+  <p class="sr" id="say" aria-live="polite"></p>
+
+  <p class="note">Setup closes after 30 minutes without activity: fauxcloud then goes back to work with the settings it has, or opens setup again if it has none.</p>
+  <p class="note">Is this a small sign-in window? You can also open <b>http://fauxcloud.setup</b> (with <b>http://</b>) in your browser while this phone is on the fauxcloud setup Wi-Fi.</p>
+  <p class="note"><a href="/*@asset licenses.txt*/" target="_blank" rel="noopener">Open source · Licenses</a></p>
+</div>
+<noscript><p>This page needs JavaScript.</p></noscript>
+<script>
+'use strict';
+/*@include core.js*/
+/*@include crypto.js*/
+/*@include picker.js*/
+/*@include setup.js*/
+</script>
+</body>
+</html>

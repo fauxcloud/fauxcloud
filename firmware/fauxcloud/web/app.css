@@ -1,0 +1,867 @@
+/* app.css -- the one stylesheet of the three faces (dashboard, setup, admin). tools/gen_web_assets.py serves
+   each face its own sheet (the `all` section + that face's section), so no face's rules meet another's: no scoping
+   is needed.
+   One theme key (fc-theme) and the same token names in every face. Dark is the default (the :root tokens); the light
+   palette lives under :root[data-theme="light"] alone, set only by the user's kept choice, never by the system theme. */
+
+/*@face all*/
+/* the footer note of every face */
+.note { color: var(--ink-3); font-size: 12px; margin: 2px 4px 0; }
+/* the one screen-reader-only rule of the three faces */
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* the hidden attribute wins over every display rule of the faces (chips bar, sheets, toasts) */
+[hidden] { display: none !important; }
+/* the iPhone home-screen app draws a translucent status bar with white glyphs over the page: on the light sky a dark
+   band under it keeps them readable, on every face (as tall as the safe area: 0 in a browser tab; dark sky: none) */
+body::after { content: ""; position: fixed; z-index: 40; inset: 0 0 auto; height: env(safe-area-inset-top); background: var(--sbar); pointer-events: none; }
+:root[data-theme="light"] { --sbar: #0004; }
+/* a link inside a quiet note (the licences link): the note's colour, underlined on hover only;
+   the source and page links look the same -- no border, no underline (aviationweather.gov here, See your station / Licenses: a.link) */
+.note a { color: inherit; text-decoration: none; }
+.note a:hover, .note a:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+/* no focus ring after a touch, mouse or pen (core.js sets data-pointer; a navigation key clears it): wins over each face's
+   :focus-visible by specificity; .input:focus-within is a text field's frame, not a ring, and stays */
+html[data-pointer] :focus-visible { outline: none; }
+/* narrow screens: the sun peeks from the top-right corner above the header, never behind its buttons: its centre 14 px
+   above the top edge puts the 34-px disc's lower edge at 20 px, above the bar's buttons (12 + 10 + 1 = 23 px) */
+@media (max-width: 719px) { :root { --sun-at: 92% -14px; } }
+
+/*@face dash*/
+
+/* Layout: one living sky fixed behind the page, liquid-glass tiles floating over it. Wind is the hero (a compass
+   dial with the speed in its centre), rain second, the other measures small tiles; tap a tile for its history
+   sheet. Dark by default: dark = dusk, light = day (the user's choice). Inline everything, system fonts only: the real page is served by
+   an ESP32 with no internet. Glass follows the liquid-glass rules: the sky is the backdrop, the tint is
+   colourless, children of a glass panel paint no surface, glass is never nested, refraction is a Chromium-only
+   extra. Measure hues are validated (dataviz validate_palette.js) in this fixed order:
+   wind, rain, humidity, temperature, pressure, sun. */
+:root {
+  /* sky sets per state (night sn, dry day sd, rain sr; prefixed so they never collide with the --r-* radius tokens); which one shows is the data's call (data-sky), not the theme's */
+  --sn-t: #0c1430; --sn-m: #212b58; --sn-l: #4a3360; --sn-ga: rgba(255,140,80,.36); --sn-gb: rgba(140,104,255,.30); --sn-gc: rgba(50,180,215,.16); --sn-cl: rgba(255,160,140,.12); --sn-dk: transparent; --sn-st: rgba(255,255,255,.9); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #0b2350; --sd-m: #14366a; --sd-l: #23497f; --sd-ga: rgba(255,214,150,.20); --sd-gb: rgba(130,190,255,.22); --sd-gc: rgba(90,210,255,.16); --sd-cl: rgba(255,255,255,.12); --sd-dk: transparent; --sd-st: transparent; --sd-su: #ffcf5a; --sd-ha: rgba(255,190,80,.45); --halo-r: 210px;
+  --sr-t: #0e1a2c; --sr-m: #17304a; --sr-l: #284a66; --sr-ga: rgba(70,150,210,.26); --sr-gb: rgba(110,110,210,.20); --sr-gc: rgba(60,190,200,.16); --sr-cl: rgba(170,195,225,.16); --sr-dk: rgba(130,160,200,.30); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.03); --tint-b: rgba(200,205,230,.05);
+  --rim: rgba(255,255,255,.42); --hair: rgba(255,255,255,.10); --rim-b: rgba(255,255,255,.06);
+  --edge: rgba(255,255,255,.13); --drop: 0 18px 44px -18px rgba(0,0,0,.6);
+  --frost: rgba(20,25,52,.66); --scrim: rgba(4,8,22,.5); --solid: rgba(30,38,76,.94); --ring: #1d2449;
+  --ink: #f3f5fb; --ink-2: rgba(243,245,251,.95); --ink-3: rgba(243,245,251,.9); --grid: rgba(243,245,251,.14);
+  --wind: #21a2cf; --rain: #4f86f7; --hum: #2ea578; --temp: #d9731f; --baro: #a66bf0; --sunc: #b08c00;
+  --ok: #45d68a; --warn: #ffbf47; --warn-t: #ffbf47; --off: rgba(243,245,251,.45);
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --num: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
+  --r-l: 32px; --r-m: 24px; --r-p: 999px;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --sn-t: #9aa2d4; --sn-m: #b8bde4; --sn-l: #e4e1f3; --sn-ga: rgba(255,206,170,.5); --sn-gb: rgba(255,255,255,.45); --sn-gc: rgba(170,180,255,.4); --sn-cl: rgba(255,255,255,.35); --sn-dk: transparent; --sn-st: rgba(255,255,255,.95); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #6fa6ec; --sd-m: #a9cbf6; --sd-l: #e8eefa; --sd-ga: rgba(255,226,150,.8); --sd-gb: rgba(255,255,255,.6); --sd-gc: rgba(140,200,255,.45); --sd-cl: rgba(255,255,255,.7); --sd-dk: transparent; --sd-st: transparent; --sd-su: rgba(255,246,214,1); --sd-ha: rgba(255,236,170,.7); --halo-r: 150px;
+  --sr-t: #8aa2bd; --sr-m: #b6c7da; --sr-l: #e4ebf3; --sr-ga: rgba(255,255,255,.5); --sr-gb: rgba(205,220,240,.6); --sr-gc: rgba(120,170,220,.35); --sr-cl: rgba(255,255,255,.8); --sr-dk: rgba(245,248,252,.75); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.48); --tint-b: rgba(236,242,252,.30);
+  --rim: rgba(255,255,255,.95); --hair: rgba(255,255,255,.45); --rim-b: rgba(255,255,255,.2);
+  --edge: rgba(20,40,80,.10); --drop: 0 18px 40px -20px rgba(30,60,120,.38);
+  --frost: rgba(246,249,255,.78); --scrim: rgba(30,50,90,.25); --solid: rgba(240,245,253,.96); --ring: #eef3fc;
+  --ink: #0e1a33; --ink-2: rgba(14,26,51,.86); --ink-3: rgba(14,26,51,.8); --grid: rgba(14,26,51,.12);
+  --wind: #0a7fa8; --rain: #2f62d6; --hum: #14875a; --temp: #c25a0a; --baro: #8a4fd6; --sunc: #8a6d00;
+  --ok: #15834a; --warn: #9c6200; --warn-t: #704400; --off: rgba(14,26,51,.45);
+  color-scheme: light;
+}
+
+/* the sky shows the selected station's state (night, dry day, rain), set from its data; the theme only sets the
+   palette (light or dark) of that state, so the sky never shows sun during a downpour or at midnight */
+:root { --sky-top: var(--sd-t); --sky-mid: var(--sd-m); --sky-low: var(--sd-l); --glow-a: var(--sd-ga); --glow-b: var(--sd-gb); --glow-c: var(--sd-gc); --cloud: var(--sd-cl); --deck: var(--sd-dk); --star: var(--sd-st); --sun: var(--sd-su); --halo: var(--sd-ha); }
+:root[data-sky="night"] { --sky-top: var(--sn-t); --sky-mid: var(--sn-m); --sky-low: var(--sn-l); --glow-a: var(--sn-ga); --glow-b: var(--sn-gb); --glow-c: var(--sn-gc); --cloud: var(--sn-cl); --deck: var(--sn-dk); --star: var(--sn-st); --sun: var(--sn-su); --halo: var(--sn-ha); }
+:root[data-sky="rain"] { --sky-top: var(--sr-t); --sky-mid: var(--sr-m); --sky-low: var(--sr-l); --glow-a: var(--sr-ga); --glow-b: var(--sr-gb); --glow-c: var(--sr-gc); --cloud: var(--sr-cl); --deck: var(--sr-dk); --star: var(--sr-st); --sun: var(--sr-su); --halo: var(--sr-ha); }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; font: 15px/1.4 var(--sans); color: var(--ink); background: var(--sky-mid);
+  font-variant-numeric: tabular-nums; -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(12px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px));
+}
+button { font: inherit; color: inherit; }
+
+/* the sky: a fixed layer (background-attachment: fixed is broken on iOS). Stars and a sun disc with crisp edges
+   give the refraction something to bend; the glows give the colourless glass its colour. */
+.sky {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1.4px 1.4px at 12% 9%, var(--star), transparent), radial-gradient(1.2px 1.2px at 27% 21%, var(--star), transparent),
+    radial-gradient(1.6px 1.6px at 44% 6%, var(--star), transparent), radial-gradient(1.1px 1.1px at 63% 15%, var(--star), transparent),
+    radial-gradient(1.5px 1.5px at 81% 8%, var(--star), transparent), radial-gradient(1.2px 1.2px at 91% 26%, var(--star), transparent),
+    radial-gradient(1.1px 1.1px at 6% 33%, var(--star), transparent), radial-gradient(1.3px 1.3px at 35% 38%, var(--star), transparent),
+    radial-gradient(1.2px 1.2px at 72% 34%, var(--star), transparent), radial-gradient(1.4px 1.4px at 55% 27%, var(--star), transparent),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--sun) 0 34px, transparent 35px),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--halo) 0, transparent var(--halo-r, 150px)),
+    radial-gradient(60vw 16vh at 22% 6%, var(--deck) 45%, transparent 66%),
+    radial-gradient(54vw 14vh at 74% 12%, var(--deck) 45%, transparent 66%),
+    radial-gradient(70vw 12vh at 46% 30%, var(--deck) 40%, transparent 64%),
+    radial-gradient(42vw 5vh at 18% 22%, var(--cloud), transparent 75%),
+    radial-gradient(30vw 4vh at 30% 25%, var(--cloud), transparent 75%),
+    radial-gradient(50vw 6vh at 74% 52%, var(--cloud), transparent 75%),
+    radial-gradient(34vw 4vh at 62% 55%, var(--cloud), transparent 75%),
+    radial-gradient(70vw 40vh at 50% 108%, var(--glow-a), transparent 70%),
+    radial-gradient(60vw 50vh at 8% 60%, var(--glow-b), transparent 70%),
+    radial-gradient(50vw 40vh at 95% 40%, var(--glow-c), transparent 70%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+}
+
+
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 14px; }
+
+/* glass: tint + three-line rim; blur is the fallback, the refraction script swaps it for url(#…) in Chromium */
+.glass {
+  position: relative; border-radius: var(--r-m); border: 1px solid var(--edge);
+  background: linear-gradient(180deg, var(--tint-a), var(--tint-b));
+  box-shadow: var(--drop), inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair), inset 0 -1px 0 var(--rim-b);
+  -webkit-backdrop-filter: blur(14px) saturate(160%); backdrop-filter: blur(14px) saturate(160%);
+}
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass { background: var(--solid); } }
+
+/* top bar */
+.bar { border-radius: 26px; padding: 10px 10px 10px 18px; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.brand { font: 600 18px/1.2 var(--num); letter-spacing: -.01em; }
+/* the mark + name: one link to the project, like the bar's other controls on hover */
+a.brand { display: inline-flex; align-items: center; gap: 8px; color: inherit; text-decoration: none; border-radius: 8px; }
+a.brand:hover { opacity: .8; }
+/* the wordmark (svg.word), as tall as the letters of 18 px text; admin and setup keep the text */
+.brand .word { height: 13px; width: auto; fill: currentColor; }
+.brand .mark { width: 32px; height: 32px; flex: 0 0 auto; }  /* as tall as the bar's round buttons read */
+/* the bar speaks only when something is wrong: the bridge serves this page, so "online" would always be true */
+.bridge { display: flex; flex-wrap: wrap; gap: 6px; order: 3; flex: 1 1 100%; min-width: 0; }
+.bridge:empty { display: none; }
+.bridge .rej, .bridge .chip { font-size: 13px; padding: 4px 10px; }
+button.rej, button.chip { font: inherit; font-size: 13px; cursor: pointer; }
+.bar .acts { margin-left: auto; display: flex; gap: 6px; }
+@media (min-width: 720px) { .bridge { order: 0; flex: 1 1 auto; } }
+.icon-btn, .admin {
+  border: 1px solid var(--edge); background: transparent; border-radius: var(--r-p); height: 36px; min-width: 36px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 0 12px; cursor: pointer; font-size: 13px; color: var(--ink-2);
+}
+.icon-btn { padding: 0; }
+/* a phone: the Admin link is its lock alone, one round button like its neighbours, so the bar's controls stay on the
+   brand's row with the language button; its name stays in aria-label and title */
+@media (max-width: 719px) { .bar .admin { padding: 0; } .bar .admin span { display: none; } }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: 0 0 auto; display: inline-block; }
+.dot.off { background: var(--off); }
+.dot.late { background: var(--warn); }  /* an airport report 60-90 min old */
+/* a problem changes the shape as well as the colour (filled dot → hollow ring), so state never rests on colour alone */
+.dot.bad { background: transparent; box-shadow: inset 0 0 0 2px var(--warn); width: 10px; height: 10px; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+
+/* station switcher: a segmented control (shown only with more than one station) */
+.stations { display: flex; gap: 4px; padding: 4px; border-radius: var(--r-p); width: max-content; max-width: 100%; overflow-x: auto; }
+.stations button { border: 0; background: transparent; border-radius: var(--r-p); padding: 8px 14px; cursor: pointer; display: inline-flex; gap: 8px; align-items: center; font-size: 14px; color: var(--ink-2); white-space: nowrap; }
+.stations button[aria-selected="true"] { background: var(--tint-a); color: var(--ink); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair); }
+/* the airport view (dash-airport.js) -- the station page's own parts (.head, .ol, .tile, .sub, the status
+   row's shape), no type size of its own; body[data-v=ap] swaps the station's head and tiles for #apv
+   (the bridge's status row stays) */
+.stations .apb { padding: 8px 12px; } .stations .apb svg { width: 18px; height: 18px; }
+.apv { display: none; gap: 14px; }
+[data-v="ap"] .apv { display: grid; } [data-v="ap"] .wrap > .head, [data-v="ap"] #grid { display: none; }
+.apt { min-width: 0; } .apt .oth { margin-top: auto; flex-direction: column; flex-wrap: nowrap; gap: 2px; }  /* nowrap: one column line, as wide as the tile */   /* one line per other airport */
+/* the name takes what is left and ends in an ellipsis; the value and its unit stay whole, on the right */
+.apt .oth > span, .apstrip > span { display: flex; align-items: center; gap: 6px; min-width: 0; white-space: nowrap; }
+.apt .oth > span > :nth-child(2), .apstrip > span { overflow: hidden; text-overflow: ellipsis; } .apt .oth > span > :nth-child(2) { flex: 1; }
+.apt .old, .apt .old b { color: var(--ink-3); } .apt.old .val { color: var(--ink-2); }
+.apt .val.w { font: 400 22px/1.2 var(--num); letter-spacing: -.01em; white-space: normal; }  /* a headline in words (the hero stats' size) */
+.pl { width: .95em; height: .95em; vertical-align: -.12em; margin-right: .3em; opacity: .75; }
+.apstrip { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; padding: 8px 18px; font-size: 14px; color: var(--ink-3); }
+.apstrip b { color: var(--ink-2); font-weight: 500; }
+.apstrip .src { margin-left: auto; white-space: nowrap; color: var(--ink-2); text-decoration: none; }  /* no underline, no border */
+
+.head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 14px; padding: 6px 4px 0; }
+.head h1 { margin: 0; font: 600 30px/1.1 var(--num); letter-spacing: -.02em; text-wrap: balance; }
+.head p { margin: 0; color: var(--ink-2); font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* tiles */
+/* tiles flow in order: wind first (full width on a phone, 2×2 from 820 px), then pairs of the same quantity;
+   a last row that is not full gets its last tile stretched to the end (fillRow) */
+.grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.grid > .hero { grid-column: 1 / -1; }
+@media (min-width: 820px) { .grid { gap: 16px; grid-template-columns: repeat(3, minmax(0, 1fr)); } .grid > .hero { grid-column: span 2; grid-row: span 2; } }
+/* the outlook strip + the wind tile in one lead block in the wind tile's place */
+.grid > .lead { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+@media (min-width: 820px) { .grid > .lead { grid-column: span 2; grid-row: span 2; gap: 16px; } .grid > .lead.solo { grid-column: 1 / -1; grid-row: auto; } }
+.lead > .hero { flex: 1; }
+/* the lower wind tile under the strip (smaller compass, shorter chart), so strip + gap + wind
+   = the plain wind tile's height and the right column stays aligned; the phone stacks, wind unchanged */
+@media (min-width: 820px) { .lead > .hero { gap: 6px; padding-block: 14px; } .lead > .hero .dial { max-width: 220px; } .lead > .hero .spark { height: 40px; } }
+@container (min-width: 520px) { .lead > .hero .body { grid-template-columns: minmax(180px, 220px) 1fr; } }
+.ol { display: flex; align-items: center; gap: 14px; padding: 12px 14px 12px 18px; border-radius: var(--r-l); cursor: pointer; transition: transform .16s ease; }
+.ol:active { transform: scale(.985); }  /* the whole strip opens the ⓘ sheet (the ⓘ stays the tab stop) */
+@media (hover: hover) { .ol:hover { box-shadow: var(--drop), inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair), inset 0 -1px 0 var(--rim-b), inset 0 0 0 999px color-mix(in srgb, var(--ink) 4%, transparent); } }  /* the glass's own layers + the tint */
+.ol > svg { width: 30px; height: 30px; flex: none; color: var(--ink); }
+.ol > svg.dim { color: var(--ink-3); }  /* the neutral sign: a full-ink glyph always means a claim */
+.olt { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.olt b { font-size: 16px; font-weight: 600; color: var(--ink); }
+.olt span { font-size: 14px; color: var(--ink-2); }
+.olt .olw { display: flex; align-items: center; gap: 6px; color: var(--warn-t); }
+.olt .olw svg { color: var(--warn); }
+.olw svg { width: 16px; height: 16px; flex: none; }
+.oli { align-self: flex-start; border: 0; background: none; padding: 2px; color: var(--ink-3); cursor: pointer; border-radius: 50%; }
+.oli svg { display: block; width: 18px; height: 18px; }
+.oli:hover, .oli:focus-visible { color: var(--ink); }
+/* new words fade, the glyph and the lines together. A page turn is out, then in, never both at once (two texts on one glass
+   flicker): the outgoing page fades to 0 in 120 ms and hides at its end, the incoming one shows and fades in only after that
+   (dash-wufc.js: the pages share one grid cell, so the card has the taller page's height and nothing moves). A poll that changes
+   the shown words fades them in (dash.js olFade: .fd for one style pass); the same words, no class, no fade */
+.ol > svg, .olp > svg, .olt { transition: opacity .18s; }
+.olp { transition: opacity .12s .12s, visibility 0s .12s; }
+.olp[aria-hidden="true"] { opacity: 0; transition: opacity .12s, visibility 0s .12s; }
+.fd > svg, .fd .olp > svg, .fd .olt { opacity: 0; transition: none; }
+.sheet.why .tools, .sheet.why #shNow, .sheet.why #shRange { display: none; }
+.sheet.why .cap { font-size: 13px; line-height: 1.45; color: var(--ink-3); margin: 0 0 12px; }
+.sheet.why .cap.ft { margin: 12px 2px 0; }
+/* the ⓘ as blocks: glyph, the strip's phrase + its number, one sentence; warnings first, in --warn */
+.blk { display: grid; grid-template-columns: 24px 1fr; gap: 2px 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 6%, transparent); margin-bottom: 8px; }
+.blk svg { width: 24px; height: 24px; grid-row: span 3; color: var(--ink); } .blk svg.dim { color: var(--ink-3); }
+.blk b { font-size: 15px; font-weight: 600; } .blk b span { font-weight: 400; color: var(--ink-2); }
+.blk p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); } .blk .nt { font-size: 13px; color: var(--ink-3); }
+.blk.warn svg { color: var(--warn); }
+.blk.warn b { color: var(--warn-t); }
+/* the sheet's section heads; a Forecast row is a .blk -- glyph, the span, the words, the source
+   tag (the same tag ends each line of the card's page 2); a phone: the span and the tag over the words */
+.why-h { margin: 14px 2px 6px !important; font-weight: 600; color: var(--ink-2) !important; }
+.fcr { grid-template-columns: 24px auto 1fr auto; align-items: baseline; } .fcr svg { grid-row: auto; align-self: center; } .fcr > b { white-space: nowrap; }
+@media (max-width: 420px) { .fcr { grid-template-columns: 24px 1fr auto; } .fcr svg { grid-row: span 2; } .fcr p { grid-column: 2/4; grid-row: 2; } }
+abbr.tag { text-decoration: none; font: 600 10px/15px var(--sans); letter-spacing: .04em; color: var(--ink-3); border: 1px solid var(--grid); border-radius: 5px; padding: 0 4px; white-space: nowrap; cursor: help; justify-self: end; }
+.oln abbr.tag { vertical-align: 1px; }
+#shTitle svg { width: 20px; height: 20px; vertical-align: -3px; margin-right: 8px; }
+.tile { display: flex; flex-direction: column; gap: 6px; padding: 16px 16px 14px; text-align: left; cursor: pointer; min-width: 0; min-height: 156px; transition: transform .16s ease; }
+.tile:active { transform: scale(.985); }
+/* dimmed by colour, not opacity -- opacity .62 takes the 15 px unit to 2.2-2.9:1; the 40 px number in
+   --ink-2 stays a large-text pass, the unit and the label keep their own contrast */
+.tile[data-stale] .val { color: var(--ink-2); }
+/* a carried value (not in the latest upload): dimmed, with its age beside the label */
+.tile.carried .val { color: var(--ink-2); } .tile.carried .dial { opacity: .8; } .lab .ago { color: var(--ink-3); font-size: 12px; order: 3; flex-basis: 100%; padding-left: 26px; margin-top: -4px; }  /* a second line, never wraps the title */
+.lab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.lab .ic { width: 18px; height: 18px; color: var(--c); flex: 0 0 auto; }
+/* a tile notice -- its own button over the tile (a sibling, never inside the tile's <button>), placed on the label's spacer */
+.tw { position: relative; display: grid; } .nsp { display: inline-block; width: 20px; height: 18px; margin-left: -4px; }
+.tnb { position: absolute; z-index: 1; width: 28px; height: 28px; padding: 4px; border: 0; border-radius: 50%; background: none; color: var(--warn); cursor: pointer; }
+.tnb svg { display: block; width: 20px; height: 20px; } .tnb:hover, .tnb:focus-visible { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+/* on a phone a read-only sheet (Outlook, airports) sizes to its content up to 92dvh, so a long one fills the screen; only
+   a genuinely short one (a tile notice, .short) stops at 72dvh; the history sheet keeps its fixed 88dvh detent */
+@media (max-width: 819px) { .sheet.why { height: auto; max-height: 92vh; max-height: 92dvh; } }
+.sheet.short { height: auto; max-height: 72vh; max-height: 72dvh; } .sheet.short #shTitle svg { color: var(--warn); }
+.lab .more { margin-left: auto; color: var(--ink-3); font-size: 18px; line-height: 1; }
+.val { font: 300 40px/1 var(--num); letter-spacing: -.03em; margin-top: 4px; white-space: nowrap; }
+.val small { font: 400 15px var(--sans); color: var(--ink-2); letter-spacing: 0; margin-left: 4px; }
+.sub { color: var(--ink-2); font-size: 13px; display: flex; flex-wrap: wrap; gap: 2px 12px; }
+.sub b { color: var(--ink); font-weight: 500; }
+.foot { margin-top: auto; }
+.rej, .chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); padding: 3px 9px; border-radius: var(--r-p);
+  border: 1px solid var(--warn); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 22%, transparent) 0 3px, transparent 3px 7px);
+}
+/* offline is not a fault -- the same box, neutral, no hatch */
+.chip { border-color: var(--edge); background: var(--tint-a); color: var(--ink-2); }
+
+/* wind hero */
+/* the wind tile lays itself out by its own width (container query), not the screen's: dial beside the stats when
+   wide, dial above them when it is the narrow tall column */
+.hero { min-height: 0; gap: 10px; padding: 18px; border-radius: var(--r-l); container-type: inline-size; }
+.hero .body { display: grid; gap: 14px; grid-template-columns: 1fr; align-items: center; }
+@container (min-width: 520px) { .hero .body { grid-template-columns: minmax(220px, 300px) 1fr; } .stats { grid-template-columns: 1fr; gap: 14px; } }
+@container (max-width: 330px) { .stat .v { font-size: 19px; } .stat .v small { display: block; margin: 2px 0 0; } .stats { gap: 8px; } }
+.dial { width: 100%; max-width: 300px; height: auto; margin: 0 auto; display: block; overflow: visible; }
+.dial text { font-family: var(--num); }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.stat { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.stat .k { font-size: 12px; color: var(--ink-2); }
+.stat .v { font: 400 22px/1.15 var(--num); letter-spacing: -.01em; }
+.stat .v small { font: 400 13px var(--sans); color: var(--ink-2); margin-left: 3px; }
+.stat .n { font-size: 12px; color: var(--ink-3); }
+/* beside the compass on a wide wind tile the three stats grow (between the sub-values and the hero) and
+   spread across the free width; phones keep the row above */
+@container (min-width: 520px) { .hero .stat .v { font-size: 34px; } .hero .stat .v small { font-size: 15px; } .hero .stat .k { font-size: 13px; } }
+@container (min-width: 760px) { .hero .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; } }
+.spark { width: 100%; height: 56px; display: block; }
+.axisrow { display: flex; justify-content: space-between; font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+/* clock labels placed by time (left: x%) under the tile charts; 06 and 18 leave narrow tiles */
+.axisrow.ax { display: block; position: relative; height: 14px; }
+.ax span { position: absolute; transform: translateX(-50%); }
+.foot { container-type: inline-size; }
+@container (max-width: 200px) { .ax .q { display: none; } }
+.tr { width: 1em; height: 1em; vertical-align: -.125em; }
+/* the trend glyph after the headline's unit, raised like a superscript, in the unit's size; dim when steady */
+.tri { margin-left: 3px; position: relative; top: -1.1em; color: var(--ink); white-space: nowrap; } .tri.st { color: var(--ink-3); }
+.tri.in { top: 0; margin-left: 0; }
+/* on a narrow tile (phones) the glyph leaves the value, which it would push out of the tile, for the title */
+.tile { container-type: inline-size; } .lab .tri { display: none; top: 0; margin-left: -2px; font-size: .85em; }
+@container (max-width: 230px) { .val .tri { display: none; } .lab .tri { display: inline; } .lab:has(.tri) { gap: 4px; } }
+/* the title row and close button stay in view while the body scrolls: as in Settings, they
+   sit outside the scrolling part (.sbody), so they need no band of their own over the glass */
+.sheet header { padding: 0 0 8px; flex: none; }
+.sbody { flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain; margin: 0 -18px; padding: 0 18px; }
+@media (min-width: 820px) { .sbody { margin: 0 -24px; padding: 0 24px; } }
+/* on a phone the drag handle sticks above the header, so the whole top stays; the range buttons are centred */
+@media (max-width: 819px) { .grab { flex: none; margin-bottom: 0; } #seg { margin-inline: auto; } #tblBtn { margin-left: auto; } }  /* the sheet: inline, at the value's size */
+/* the 24-h chart's highest / lowest value written at its point */
+.chw { display: block; position: relative; margin-top: 12px; }
+.ext { position: absolute; transform: translate(-50%, -120%); font-size: 10px; line-height: 1; color: var(--ink-2); pointer-events: none; white-space: nowrap; text-shadow: 0 0 3px var(--ring), 0 0 2px var(--ring); }
+.ext.r { transform: translate(-100%, -120%); } .ext.l { transform: translate(0, -120%); }
+/* hover values on the tile charts (desktop): a label above the chart and a crosshair */
+.ttip { position: absolute; bottom: 100%; margin-bottom: 4px; padding: 3px 8px; border-radius: 8px; background: var(--solid); color: var(--ink); font-size: 12px; white-space: nowrap; pointer-events: none; box-shadow: var(--drop); z-index: 2; }
+.txh { position: absolute; width: 1px; background: var(--ink-3); pointer-events: none; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend svg { width: 22px; height: 10px; overflow: visible; }
+
+.bars { width: 100%; height: 44px; display: block; }
+
+/* health: the bridge's status row, one glass panel: the glyphs only, in the state's colour, their words
+   on hover (title) and for screen readers; no Details here (they live in Settings); the airport strip's height */
+.health, .apstrip { min-height: 48px; }
+.health { border-radius: var(--r-m); padding: 8px 18px; display: flex; align-items: center; }
+.states { display: flex; flex-wrap: wrap; gap: 6px 16px; min-width: 0; }
+.state { display: inline-flex; cursor: default; }
+.state svg { width: 18px; height: 18px; color: var(--ok); } .state.warn svg { color: var(--warn); }
+
+/* history sheet: modal tier (frost over the tint) so text stays readable over the scrim */
+.scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.sheet {
+  /* phone: a fixed "large detent" like iOS, so the sheet always opens at the same height and scrolls inside */
+  position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; height: 88vh; height: 88dvh; display: flex; flex-direction: column; overflow: hidden;
+  border-radius: var(--r-l) var(--r-l) 0 0; border: 1px solid var(--edge); border-bottom: 0;
+  background: linear-gradient(var(--frost), var(--frost)), linear-gradient(180deg, var(--tint-a), var(--tint-b));
+  box-shadow: 0 -10px 40px rgba(0,0,0,.25), inset 0 1px 0 var(--rim);
+  -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  animation: rise .26s cubic-bezier(.2,.9,.3,1);
+}
+.sheet:focus { outline: none; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+@media (min-width: 820px) {
+  .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(820px, calc(100vw - 48px)); border-radius: var(--r-l); border-bottom: 1px solid var(--edge); height: auto; max-height: 88vh; padding: 18px 24px 24px; animation: none; }
+}
+/* the handle is a full-width drag zone; dragging it (or the header) down closes the sheet */
+.grab { height: 26px; margin: -10px -18px 4px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; }
+.grab::before { content: ""; width: 40px; height: 5px; border-radius: 3px; background: var(--ink-3); opacity: .6; }
+@media (max-width: 819px) { .sheet header { touch-action: none; } }
+@media (min-width: 820px) { .grab { display: none; } }
+.sheet header { display: flex; align-items: flex-start; gap: 12px; }
+.sheet h2 { margin: 0; font: 600 22px/1.2 var(--num); letter-spacing: -.01em; display: flex; align-items: center; gap: 10px; }
+.sheet h2 .ic { width: 24px; height: 24px; color: var(--c); flex: 0 0 auto; }
+.sheet header p { margin: 2px 0 0; color: var(--ink-2); font-size: 13px; }
+.sheet header .icon-btn { margin-left: auto; }
+.now { display: flex; flex-wrap: wrap; gap: 10px 26px; margin: 14px 0 6px; }
+/* in a two-field sheet the two fields' stats switch the chart; the shown one is underlined in its hue */
+button.sw { font: inherit; color: inherit; text-align: left; cursor: pointer; background: none; border: 1px solid var(--grid); border-radius: 12px; padding: 4px 7px; margin: -5px -8px; }
+button.sw:hover { background: var(--grid); }
+button.sw[aria-pressed="true"] .v { text-decoration: underline 2px var(--c); text-underline-offset: 5px; }
+.tools { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-start; justify-content: space-between; margin: 10px 0; }
+/* "Offline since 09:10" (now-axis addendum): sits beside "Show table", both on the right, wrapping together */
+.tools .off-since { gap: 6px; margin-left: auto; }
+.seg { display: inline-flex; padding: 3px; border-radius: var(--r-p); border: 1px solid var(--edge); }
+.seg button { border: 0; background: transparent; border-radius: var(--r-p); padding: 7px 14px; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+/* the calendar segment; From / To beside it in the tools row, the presets under them;
+   both wrap at 375 px with longer words */
+.seg .cal { display: block; }
+.dates { display: flex; flex-direction: column; align-items: stretch; gap: 8px; font-size: 13px; color: var(--ink-2); }
+/* the presets span From..To and stand as tall as the date fields and Show table */
+.dates .seg { display: flex; padding: 2px; min-height: 34px; }
+.dates .seg button { flex: 1; padding: 4px 10px; }
+.dates .dr { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; min-height: 40px; }
+.dates label { display: inline-flex; align-items: center; gap: 6px; }
+.dates input { font: inherit; color: var(--ink); background: transparent; border: 1px solid var(--edge); border-radius: var(--r-p); padding: 6px 12px; min-height: 34px; }
+.csv { display: flex; justify-content: flex-end; margin-top: 12px; }
+.csv + .tw { margin-top: 6px; }
+.seg button[aria-pressed="true"] { background: var(--tint-a); color: var(--ink); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair); }
+.cw { position: relative; margin-top: 8px; touch-action: pan-y; }
+.chart { width: 100%; height: auto; display: block; overflow: visible; }
+.chart text { font: 11px var(--sans); fill: var(--ink-3); }
+.tip { position: absolute; top: 0; pointer-events: none; padding: 8px 12px; border-radius: 14px; font-size: 12px; white-space: nowrap; background: var(--solid); border: 1px solid var(--edge); box-shadow: var(--drop); }
+.tip b { display: block; font-weight: 600; margin-bottom: 4px; }
+.tip dl { margin: 0; display: grid; grid-template-columns: auto auto; gap: 2px 14px; }
+.tip dt { color: var(--ink-2); } .tip dd { margin: 0; text-align: right; display: flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.tip dd small { color: var(--ink-3); font-size: 11px; } .tip dd svg { width: 14px; height: 14px; }
+.tip dd.warn { color: var(--warn-t); font-weight: 600; }
+.cap { font-size: 12px; color: var(--ink-3); margin: 8px 0 0; }
+.twin { display: grid; gap: 18px; grid-template-columns: 1fr; margin-top: 14px; }
+@media (min-width: 640px) { .twin { grid-template-columns: 1fr 1fr; align-items: center; } }
+.tw { overflow-x: auto; max-height: 300px; overflow-y: auto; margin-top: 12px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { text-align: right; padding: 6px 8px; border-bottom: 1px solid var(--grid); white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { color: var(--ink-3); font-weight: 500; position: sticky; top: 0; background: var(--solid); }
+td.flag { font-weight: 600; } td.flag::after { content: " ▲"; color: var(--warn-t); font-size: 10px; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; padding: 10px 16px; border-radius: var(--r-p); font-size: 13px; background: var(--solid); border: 1px solid var(--edge); box-shadow: var(--drop); max-width: calc(100vw - 32px); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass, .sheet { background: var(--solid) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; }
+}
+@media (prefers-reduced-motion: reduce) { .tile, .tile:active, .ol, .ol:active, .ol > svg, .olp, .olp[aria-hidden="true"], .olp > svg, .olt { transition: none; transform: none; } .sheet { animation: none; } }
+
+/* zero stations: the pairing card */
+.empty { grid-column: 1 / -1; padding: 22px; border-radius: var(--r-l); display: grid; gap: 14px; }
+.empty h2 { margin: 0; font: 600 22px/1.2 var(--num); letter-spacing: -.01em; }
+.empty a { color: inherit; }
+.empty .steps, .empty .sub { max-width: 64ch; }  /* wide screens: readable lines; no .lg here (a wide, low card shows the refraction seam) */
+.empty .go { justify-self: start; text-decoration: none; color: var(--ink); }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: grid; gap: 12px; }
+.steps li { counter-increment: st; display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; color: var(--ink-2); font-size: 15px; }
+.steps li::before { content: counter(st); width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font: 600 14px var(--num); color: var(--ink); background: var(--tint-a); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair); }
+.steps b { color: var(--ink); font-weight: 600; }
+
+/*@face setup*/
+/* "Keep the current password" on setup again (the admin face's switch, compact) */
+.toggle { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; margin: 4px 0 14px; }
+.toggle input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 13px; background: var(--grid); position: relative; flex: 0 0 auto; cursor: pointer; margin: 0; }
+.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); }
+.toggle input:checked { background: var(--ok); } .toggle input:checked::after { transform: translateX(18px); background: #fff; }
+.toggle span { display: grid; gap: 2px; } .toggle small { color: var(--ink-3); font-size: 13px; }
+
+/* Layout: one glass card, one step at a time, on a quiet sky. The setup page runs once, on fauxcloud's own Wi-Fi,
+   inside a phone's captive-portal sheet: no internet, a limited browser, so CSS glass only (no refraction script),
+   no animation beyond a progress ring. Tokens, glass and sky are dashboard v2's; with no station yet,
+   the sky is day or night from the phone's clock. Minimal by design: home Wi-Fi, time zone,
+   admin password, fauxcloud's own Wi-Fi password. MQTT and everything else live in the admin panel, because the
+   broker is only reachable once fauxcloud has joined the home network. */
+:root {
+  /* sky sets per state (night sn, dry day sd, rain sr; prefixed so they never collide with the --r-* radius tokens); which one shows is the data's call (data-sky), not the theme's */
+  --sn-t: #0c1430; --sn-m: #212b58; --sn-l: #4a3360; --sn-ga: rgba(255,140,80,.36); --sn-gb: rgba(140,104,255,.30); --sn-gc: rgba(50,180,215,.16); --sn-cl: rgba(255,160,140,.12); --sn-dk: transparent; --sn-st: rgba(255,255,255,.9); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #0b2350; --sd-m: #14366a; --sd-l: #23497f; --sd-ga: rgba(255,214,150,.20); --sd-gb: rgba(130,190,255,.22); --sd-gc: rgba(90,210,255,.16); --sd-cl: rgba(255,255,255,.12); --sd-dk: transparent; --sd-st: transparent; --sd-su: #ffcf5a; --sd-ha: rgba(255,190,80,.45); --halo-r: 210px;
+  --sr-t: #0e1a2c; --sr-m: #17304a; --sr-l: #284a66; --sr-ga: rgba(70,150,210,.26); --sr-gb: rgba(110,110,210,.20); --sr-gc: rgba(60,190,200,.16); --sr-cl: rgba(170,195,225,.16); --sr-dk: rgba(130,160,200,.30); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.03); --tint-b: rgba(200,205,230,.05);
+  --rim: rgba(255,255,255,.42); --hair: rgba(255,255,255,.10); --rim-b: rgba(255,255,255,.06);
+  --edge: rgba(255,255,255,.13); --drop: 0 18px 44px -18px rgba(0,0,0,.6);
+  --frost: rgba(20,25,52,.66); --scrim: rgba(4,8,22,.5); --solid: rgba(30,38,76,.94); --ring: #1d2449;
+  --ink: #f3f5fb; --ink-2: rgba(243,245,251,.95); --ink-3: rgba(243,245,251,.9); --grid: rgba(243,245,251,.14);
+  --wind: #21a2cf; --rain: #4f86f7; --hum: #2ea578; --temp: #d9731f; --baro: #a66bf0; --sunc: #b08c00;
+  --ok: #45d68a; --warn: #ffbf47; --off: rgba(243,245,251,.45);
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --num: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
+  --r-l: 32px; --r-m: 24px; --r-p: 999px;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --sn-t: #9aa2d4; --sn-m: #b8bde4; --sn-l: #e4e1f3; --sn-ga: rgba(255,206,170,.5); --sn-gb: rgba(255,255,255,.45); --sn-gc: rgba(170,180,255,.4); --sn-cl: rgba(255,255,255,.35); --sn-dk: transparent; --sn-st: rgba(255,255,255,.95); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #6fa6ec; --sd-m: #a9cbf6; --sd-l: #e8eefa; --sd-ga: rgba(255,226,150,.8); --sd-gb: rgba(255,255,255,.6); --sd-gc: rgba(140,200,255,.45); --sd-cl: rgba(255,255,255,.7); --sd-dk: transparent; --sd-st: transparent; --sd-su: rgba(255,246,214,1); --sd-ha: rgba(255,236,170,.7); --halo-r: 150px;
+  --sr-t: #8aa2bd; --sr-m: #b6c7da; --sr-l: #e4ebf3; --sr-ga: rgba(255,255,255,.5); --sr-gb: rgba(205,220,240,.6); --sr-gc: rgba(120,170,220,.35); --sr-cl: rgba(255,255,255,.8); --sr-dk: rgba(245,248,252,.75); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.48); --tint-b: rgba(236,242,252,.30);
+  --rim: rgba(255,255,255,.95); --hair: rgba(255,255,255,.45); --rim-b: rgba(255,255,255,.2);
+  --edge: rgba(20,40,80,.10); --drop: 0 18px 40px -20px rgba(30,60,120,.38);
+  --frost: rgba(246,249,255,.78); --scrim: rgba(30,50,90,.25); --solid: rgba(240,245,253,.96); --ring: #eef3fc;
+  --ink: #0e1a33; --ink-2: rgba(14,26,51,.86); --ink-3: rgba(14,26,51,.8); --grid: rgba(14,26,51,.12);
+  --wind: #0a7fa8; --rain: #2f62d6; --hum: #14875a; --temp: #c25a0a; --baro: #8a4fd6; --sunc: #8a6d00;
+  --ok: #15834a; --warn: #9c6200; --off: rgba(14,26,51,.45);
+  color-scheme: light;
+}
+
+/* the sky shows the selected station's state (night, dry day, rain), set from its data; the theme only sets the
+   palette (light or dark) of that state, so the sky never shows sun during a downpour or at midnight */
+:root { --sky-top: var(--sd-t); --sky-mid: var(--sd-m); --sky-low: var(--sd-l); --glow-a: var(--sd-ga); --glow-b: var(--sd-gb); --glow-c: var(--sd-gc); --cloud: var(--sd-cl); --deck: var(--sd-dk); --star: var(--sd-st); --sun: var(--sd-su); --halo: var(--sd-ha); }
+:root[data-sky="night"] { --sky-top: var(--sn-t); --sky-mid: var(--sn-m); --sky-low: var(--sn-l); --glow-a: var(--sn-ga); --glow-b: var(--sn-gb); --glow-c: var(--sn-gc); --cloud: var(--sn-cl); --deck: var(--sn-dk); --star: var(--sn-st); --sun: var(--sn-su); --halo: var(--sn-ha); }
+:root[data-sky="rain"] { --sky-top: var(--sr-t); --sky-mid: var(--sr-m); --sky-low: var(--sr-l); --glow-a: var(--sr-ga); --glow-b: var(--sr-gb); --glow-c: var(--sr-gc); --cloud: var(--sr-cl); --deck: var(--sr-dk); --star: var(--sr-st); --sun: var(--sr-su); --halo: var(--sr-ha); }
+
+/* form tokens (not in the dashboard), same theme pattern */
+:root { --bad: #ff8a80; --field: rgba(255,255,255,.07); --field-edge: rgba(255,255,255,.22); --row: rgba(255,255,255,.05);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; --r-tile: var(--r-m); --r-sheet: var(--r-l); --r-card: var(--r-m); --r-field: 12px; --r-pill: var(--r-p); }
+:root[data-theme="light"] { --bad: #b3261e; --field: rgba(255,255,255,.75); --field-edge: rgba(14,26,51,.22); --row: rgba(14,26,51,.04); }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; min-height: 100vh; font: 16px/1.45 var(--sans); color: var(--ink); background: var(--sky-mid);
+  -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(16px, env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-bottom, 0px));
+}
+/* the sky: a fixed layer (background-attachment: fixed is broken on iOS). Stars and a sun disc with crisp edges
+   give the refraction something to bend; the glows give the colourless glass its colour. */
+.sky {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1.4px 1.4px at 12% 9%, var(--star), transparent), radial-gradient(1.2px 1.2px at 27% 21%, var(--star), transparent),
+    radial-gradient(1.6px 1.6px at 44% 6%, var(--star), transparent), radial-gradient(1.1px 1.1px at 63% 15%, var(--star), transparent),
+    radial-gradient(1.5px 1.5px at 81% 8%, var(--star), transparent), radial-gradient(1.2px 1.2px at 91% 26%, var(--star), transparent),
+    radial-gradient(1.1px 1.1px at 6% 33%, var(--star), transparent), radial-gradient(1.3px 1.3px at 35% 38%, var(--star), transparent),
+    radial-gradient(1.2px 1.2px at 72% 34%, var(--star), transparent), radial-gradient(1.4px 1.4px at 55% 27%, var(--star), transparent),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--sun) 0 34px, transparent 35px),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--halo) 0, transparent var(--halo-r, 150px)),
+    radial-gradient(60vw 16vh at 22% 6%, var(--deck) 45%, transparent 66%),
+    radial-gradient(54vw 14vh at 74% 12%, var(--deck) 45%, transparent 66%),
+    radial-gradient(70vw 12vh at 46% 30%, var(--deck) 40%, transparent 64%),
+    radial-gradient(42vw 5vh at 18% 22%, var(--cloud), transparent 75%),
+    radial-gradient(30vw 4vh at 30% 25%, var(--cloud), transparent 75%),
+    radial-gradient(50vw 6vh at 74% 52%, var(--cloud), transparent 75%),
+    radial-gradient(34vw 4vh at 62% 55%, var(--cloud), transparent 75%),
+    radial-gradient(70vw 40vh at 50% 108%, var(--glow-a), transparent 70%),
+    radial-gradient(60vw 50vh at 8% 60%, var(--glow-b), transparent 70%),
+    radial-gradient(50vw 40vh at 95% 40%, var(--glow-c), transparent 70%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+}
+button, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.wrap { max-width: 480px; margin: 0 auto; display: grid; gap: 14px; }
+
+.top { display: flex; align-items: center; gap: 10px; padding: 2px 4px; }
+.brand { font: 600 18px var(--num); } .brand .mark { width: 32px; height: 32px; vertical-align: middle; margin: -4px 8px 0 0; }  /* the mark, as on the dashboard; one inline run, so the name and the face word share a baseline */
+.top .what { color: var(--ink-2); font-weight: 400; }  /* one baseline and one size with the name */
+.steps { margin-left: auto; display: flex; gap: 6px; }
+.steps i { width: 8px; height: 8px; border-radius: 50%; background: var(--grid); }
+.steps i.on { background: var(--ink); } .steps i.done { background: var(--ink-2); }
+
+.glass { border-radius: var(--r-card); border: 1px solid var(--edge);
+  background: linear-gradient(180deg, var(--tint-a), var(--tint-b));
+  box-shadow: var(--drop), inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair), inset 0 -1px 0 var(--rim-b);
+  -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass { background: var(--solid); } }
+@media (prefers-reduced-transparency: reduce) { .glass { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; } }
+
+.card { padding: 22px 20px 20px; display: grid; gap: 16px; overflow-wrap: anywhere; }  /* a 32-character network name in a heading or hint breaks instead of widening the card */
+.eyebrow { color: var(--ink-3); font-size: 13px; margin: 0; }
+h1 { margin: 0; font: 600 26px/1.15 var(--num); letter-spacing: -.01em; text-wrap: balance; }
+.lead { margin: 0; color: var(--ink-2); font-size: 15px; }
+
+label.f { display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); }
+.input { display: flex; align-items: center; border: 1px solid var(--field-edge); background: var(--field); border-radius: var(--r-field); }
+.input input { flex: 1; min-width: 0; width: 0; border: 0; background: transparent; padding: 12px 14px; font-size: 16px; outline: none; }  /* width 0: the field's built-in ~20-character width would set the card's minimum and push it past a phone screen; flex still fills the row */
+.input:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.input.err { border-color: var(--bad); }
+.input .ghost { border: 0; background: transparent; padding: 0 14px; font-size: 14px; color: var(--ink-2); cursor: pointer; min-height: 44px; }
+@media (max-width: 400px) { .input input { padding: 12px 10px; } .input .ghost { padding: 0 8px; } }  /* a phone: a generated password stays readable beside Show and Generate */
+.hint { font-size: 13px; color: var(--ink-3); margin: 0; }
+.error { font-size: 13px; color: var(--bad); margin: 0; font-weight: 500; }
+
+.nets { display: grid; grid-template-columns: minmax(0, 1fr); gap: 2px; margin: 0; padding: 0; list-style: none; max-height: 300px; overflow: auto; border-radius: var(--r-field); }  /* minmax: a long name ends in an ellipsis instead of scrolling the list sideways */
+.nets button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 12px 12px; border: 0; background: transparent; border-radius: 12px; cursor: pointer; text-align: left; min-height: 48px; }
+.nets button[aria-pressed="true"] { background: var(--tint-a); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.nets .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nets small { color: var(--ink-3); font-size: 12px; }
+.bars { width: 18px; height: 14px; flex: 0 0 auto; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.link { border: 0; background: none; padding: 6px 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 14px; }
+
+.picked { padding: 12px 14px; border-radius: var(--r-field); background: var(--field); border: 1px solid var(--field-edge); font-size: 14px; display: flex; gap: 12px; align-items: center; }
+.picked b { display: block; font-size: 16px; color: var(--ink); } .picked .flag { width: 32px; height: 32px; }
+.picked span { color: var(--ink-3); }
+
+.meter { display: flex; gap: 4px; } .meter i { flex: 1; height: 4px; border-radius: 2px; background: var(--grid); }
+.meter[data-l="1"] i:nth-child(-n+1) { background: var(--bad); }
+.meter[data-l="2"] i:nth-child(-n+2) { background: var(--warn); }
+.meter[data-l="3"] i:nth-child(-n+3), .meter[data-l="4"] i { background: var(--ok); }
+
+.review { margin: 0; display: grid; grid-template-columns: auto 1fr auto; gap: 10px 14px; align-items: baseline; font-size: 15px; }
+.review dt { color: var(--ink-3); font-size: 13px; } .review dd { margin: 0; min-width: 0; overflow-wrap: anywhere; }
+
+.actions { display: flex; gap: 10px; justify-content: space-between; align-items: center; margin-top: 4px; }
+.btn { border: 0; border-radius: var(--r-pill); padding: 12px 22px; min-height: 48px; font-weight: 600; cursor: pointer; }
+.btn.primary { background: var(--ink); color: var(--sky-top); }
+.btn.primary:disabled { opacity: .45; cursor: not-allowed; }
+.btn.quiet { background: transparent; color: var(--ink-2); box-shadow: inset 0 0 0 1px var(--field-edge); }
+
+.wait { display: grid; justify-items: center; gap: 14px; text-align: center; padding: 10px 0; }
+.ring { width: 96px; height: 96px; }
+.ring .track { stroke: var(--grid); } .ring .arc { stroke: var(--ink); transition: stroke-dashoffset 1s linear; }
+.done { display: grid; gap: 14px; }
+.address { padding: 14px 16px; border-radius: var(--r-field); background: var(--field); border: 1px solid var(--field-edge); display: grid; gap: 2px; }
+.address b { font: 600 20px var(--num); } .address span { color: var(--ink-2); font-size: 14px; font-family: var(--mono); }
+.next { margin: 0; padding-left: 22px; display: grid; gap: 8px; color: var(--ink-2); font-size: 15px; }
+.next b { color: var(--ink); font-weight: 600; }
+.badge { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--ink-2); }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); }
+
+.pk { display: grid; gap: 10px; }
+.pk-crumbs { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
+.pk-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; max-height: 300px; overflow: auto; overscroll-behavior: contain; }
+.pk-list button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: transparent; border-radius: 12px; cursor: pointer; text-align: left; min-height: 46px; color: inherit; font: inherit; }
+.pk-list button[aria-pressed="true"] { background: var(--tint-a); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.pk-list .pk-main { flex: 1; min-width: 0; }
+.pk-list small { color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+.pk-empty { padding: 10px 12px; }
+.flag { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--grid); }
+.flag.none { display: inline-grid; place-items: center; font-size: 9px; color: var(--ink-3); }
+.picked { display: flex; gap: 12px; align-items: center; }
+.picked .flag { width: 32px; height: 32px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .ring .arc { transition: none; } }
+
+/*@face admin*/
+
+/* Layout: the dashboard's language for settings. A grid of glass tiles, each showing one
+   thing's state (a hollow warning ring when it needs attention); a tap opens a sheet with just that form, and the
+   sheet saves only its own fields (partial PUT). Phone: bottom sheet; desktop: centred dialog. Tokens, glass and
+   sky are dashboard v2's (no custom background); no refraction (forms change size often). The page polls nothing on its own: requests follow an action, one at a time. */
+:root {
+  /* sky sets per state (night sn, dry day sd, rain sr; prefixed so they never collide with the --r-* radius tokens); which one shows is the data's call (data-sky), not the theme's */
+  --sn-t: #0c1430; --sn-m: #212b58; --sn-l: #4a3360; --sn-ga: rgba(255,140,80,.36); --sn-gb: rgba(140,104,255,.30); --sn-gc: rgba(50,180,215,.16); --sn-cl: rgba(255,160,140,.12); --sn-dk: transparent; --sn-st: rgba(255,255,255,.9); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #0b2350; --sd-m: #14366a; --sd-l: #23497f; --sd-ga: rgba(255,214,150,.20); --sd-gb: rgba(130,190,255,.22); --sd-gc: rgba(90,210,255,.16); --sd-cl: rgba(255,255,255,.12); --sd-dk: transparent; --sd-st: transparent; --sd-su: #ffcf5a; --sd-ha: rgba(255,190,80,.45); --halo-r: 210px;
+  --sr-t: #0e1a2c; --sr-m: #17304a; --sr-l: #284a66; --sr-ga: rgba(70,150,210,.26); --sr-gb: rgba(110,110,210,.20); --sr-gc: rgba(60,190,200,.16); --sr-cl: rgba(170,195,225,.16); --sr-dk: rgba(130,160,200,.30); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.03); --tint-b: rgba(200,205,230,.05);
+  --rim: rgba(255,255,255,.42); --hair: rgba(255,255,255,.10); --rim-b: rgba(255,255,255,.06);
+  --edge: rgba(255,255,255,.13); --drop: 0 18px 44px -18px rgba(0,0,0,.6);
+  --frost: rgba(20,25,52,.66); --scrim: rgba(4,8,22,.5); --solid: rgba(30,38,76,.94); --ring: #1d2449;
+  --ink: #f3f5fb; --ink-2: rgba(243,245,251,.95); --ink-3: rgba(243,245,251,.9); --grid: rgba(243,245,251,.14);
+  --wind: #21a2cf; --rain: #7d72f0; --hum: #2ea578; --temp: #d9731f; --baro: #e0559c; --sunc: #b08c00;
+  --ok: #45d68a; --warn: #ffbf47; --warn-t: #ffbf47; --off: rgba(243,245,251,.45);
+  --sans: system-ui, -apple-system, "Segoe UI Variable Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --num: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI Variable Display", "Segoe UI", Roboto, sans-serif;
+  --r-l: 32px; --r-m: 24px; --r-p: 999px;
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  --sn-t: #9aa2d4; --sn-m: #b8bde4; --sn-l: #e4e1f3; --sn-ga: rgba(255,206,170,.5); --sn-gb: rgba(255,255,255,.45); --sn-gc: rgba(170,180,255,.4); --sn-cl: rgba(255,255,255,.35); --sn-dk: transparent; --sn-st: rgba(255,255,255,.95); --sn-su: transparent; --sn-ha: transparent;
+  --sd-t: #6fa6ec; --sd-m: #a9cbf6; --sd-l: #e8eefa; --sd-ga: rgba(255,226,150,.8); --sd-gb: rgba(255,255,255,.6); --sd-gc: rgba(140,200,255,.45); --sd-cl: rgba(255,255,255,.7); --sd-dk: transparent; --sd-st: transparent; --sd-su: rgba(255,246,214,1); --sd-ha: rgba(255,236,170,.7); --halo-r: 150px;
+  --sr-t: #8aa2bd; --sr-m: #b6c7da; --sr-l: #e4ebf3; --sr-ga: rgba(255,255,255,.5); --sr-gb: rgba(205,220,240,.6); --sr-gc: rgba(120,170,220,.35); --sr-cl: rgba(255,255,255,.8); --sr-dk: rgba(245,248,252,.75); --sr-st: transparent; --sr-su: transparent; --sr-ha: transparent;
+  --tint-a: rgba(255,255,255,.48); --tint-b: rgba(236,242,252,.30);
+  --rim: rgba(255,255,255,.95); --hair: rgba(255,255,255,.45); --rim-b: rgba(255,255,255,.2);
+  --edge: rgba(20,40,80,.10); --drop: 0 18px 40px -20px rgba(30,60,120,.38);
+  --frost: rgba(246,249,255,.78); --scrim: rgba(30,50,90,.25); --solid: rgba(240,245,253,.96); --ring: #eef3fc;
+  --ink: #0e1a33; --ink-2: rgba(14,26,51,.86); --ink-3: rgba(14,26,51,.8); --grid: rgba(14,26,51,.12);
+  --wind: #0a7fa8; --rain: #5b4fd6; --hum: #14875a; --temp: #c25a0a; --baro: #c2397e; --sunc: #8a6d00;
+  --ok: #15834a; --warn: #9c6200; --warn-t: #704400; --off: rgba(14,26,51,.45);
+  color-scheme: light;
+}
+
+/* the sky shows the selected station's state (night, dry day, rain), set from its data; the theme only sets the
+   palette (light or dark) of that state, so the sky never shows sun during a downpour or at midnight */
+:root { --sky-top: var(--sd-t); --sky-mid: var(--sd-m); --sky-low: var(--sd-l); --glow-a: var(--sd-ga); --glow-b: var(--sd-gb); --glow-c: var(--sd-gc); --cloud: var(--sd-cl); --deck: var(--sd-dk); --star: var(--sd-st); --sun: var(--sd-su); --halo: var(--sd-ha); }
+:root[data-sky="night"] { --sky-top: var(--sn-t); --sky-mid: var(--sn-m); --sky-low: var(--sn-l); --glow-a: var(--sn-ga); --glow-b: var(--sn-gb); --glow-c: var(--sn-gc); --cloud: var(--sn-cl); --deck: var(--sn-dk); --star: var(--sn-st); --sun: var(--sn-su); --halo: var(--sn-ha); }
+:root[data-sky="rain"] { --sky-top: var(--sr-t); --sky-mid: var(--sr-m); --sky-low: var(--sr-l); --glow-a: var(--sr-ga); --glow-b: var(--sr-gb); --glow-c: var(--sr-gc); --cloud: var(--sr-cl); --deck: var(--sr-dk); --star: var(--sr-st); --sun: var(--sr-su); --halo: var(--sr-ha); }
+
+/* form tokens (not in the dashboard), same theme pattern */
+:root { --bad: #ff8a80; --field: rgba(255,255,255,.07); --field-edge: rgba(255,255,255,.22); --row: rgba(255,255,255,.05);
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace; --r-tile: var(--r-m); --r-sheet: var(--r-l); --r-card: var(--r-m); --r-field: 12px; --r-pill: var(--r-p); }
+:root[data-theme="light"] { --bad: #b3261e; --field: rgba(255,255,255,.75); --field-edge: rgba(14,26,51,.22); --row: rgba(14,26,51,.04); }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100vh; font: 15px/1.45 var(--sans); color: var(--ink); background: var(--sky-mid); -webkit-font-smoothing: antialiased;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: max(14px, env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-bottom, 0px)); }
+/* the sky: a fixed layer (background-attachment: fixed is broken on iOS). Stars and a sun disc with crisp edges
+   give the refraction something to bend; the glows give the colourless glass its colour. */
+.sky {
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background:
+    radial-gradient(1.4px 1.4px at 12% 9%, var(--star), transparent), radial-gradient(1.2px 1.2px at 27% 21%, var(--star), transparent),
+    radial-gradient(1.6px 1.6px at 44% 6%, var(--star), transparent), radial-gradient(1.1px 1.1px at 63% 15%, var(--star), transparent),
+    radial-gradient(1.5px 1.5px at 81% 8%, var(--star), transparent), radial-gradient(1.2px 1.2px at 91% 26%, var(--star), transparent),
+    radial-gradient(1.1px 1.1px at 6% 33%, var(--star), transparent), radial-gradient(1.3px 1.3px at 35% 38%, var(--star), transparent),
+    radial-gradient(1.2px 1.2px at 72% 34%, var(--star), transparent), radial-gradient(1.4px 1.4px at 55% 27%, var(--star), transparent),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--sun) 0 34px, transparent 35px),
+    radial-gradient(circle at var(--sun-at, 88% 6%), var(--halo) 0, transparent var(--halo-r, 150px)),
+    radial-gradient(60vw 16vh at 22% 6%, var(--deck) 45%, transparent 66%),
+    radial-gradient(54vw 14vh at 74% 12%, var(--deck) 45%, transparent 66%),
+    radial-gradient(70vw 12vh at 46% 30%, var(--deck) 40%, transparent 64%),
+    radial-gradient(42vw 5vh at 18% 22%, var(--cloud), transparent 75%),
+    radial-gradient(30vw 4vh at 30% 25%, var(--cloud), transparent 75%),
+    radial-gradient(50vw 6vh at 74% 52%, var(--cloud), transparent 75%),
+    radial-gradient(34vw 4vh at 62% 55%, var(--cloud), transparent 75%),
+    radial-gradient(70vw 40vh at 50% 108%, var(--glow-a), transparent 70%),
+    radial-gradient(60vw 50vh at 8% 60%, var(--glow-b), transparent 70%),
+    radial-gradient(50vw 40vh at 95% 40%, var(--glow-c), transparent 70%),
+    linear-gradient(180deg, var(--sky-top) 0%, var(--sky-mid) 55%, var(--sky-low) 100%);
+}
+button, input, select { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; }
+.ic { width: 20px; height: 20px; flex: 0 0 auto; }
+.glass { border-radius: var(--r-tile); border: 1px solid var(--edge); background: linear-gradient(180deg, var(--tint-a), var(--tint-b));
+  box-shadow: var(--drop), inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair), inset 0 -1px 0 var(--rim-b);
+  -webkit-backdrop-filter: blur(16px) saturate(160%); backdrop-filter: blur(16px) saturate(160%); }
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) { .glass { background: var(--solid); } }
+@media (prefers-reduced-transparency: reduce) { .glass, .sheet { background: var(--solid) !important; -webkit-backdrop-filter: none !important; backdrop-filter: none !important; } }
+h1 { margin: 0; font: 600 24px/1.2 var(--num); letter-spacing: -.01em; text-wrap: balance; }
+h2 { margin: 0; font: 600 20px/1.2 var(--num); letter-spacing: -.01em; }
+h3 { margin: 0; font: 600 15px var(--sans); }
+.lead { margin: 0; color: var(--ink-2); }
+.hint { margin: 0; font-size: 13px; color: var(--ink-3); }
+.error { margin: 0; font-size: 13px; color: var(--bad); font-weight: 500; }
+.okmsg { margin: 0; font-size: 13px; color: var(--ok); font-weight: 500; }
+.brand { font: 600 18px var(--num); } .brand .mark { width: 32px; height: 32px; vertical-align: middle; margin: -4px 8px 0 0; }  /* the mark, as on the dashboard; one inline run, so the name and the face word share a baseline */
+.brand a { color: inherit; text-decoration: none; border-radius: 8px; } .brand a:hover { opacity: .8; }  /* only the mark and the name link to fauxcloud.org */
+
+/* sign in */
+.signin { max-width: 400px; margin: 8vh auto 0; padding: 26px 22px; display: grid; gap: 14px; }
+
+/* page */
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 14px; }
+.top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 10px 10px 18px; border-radius: 22px; }
+.top .what { color: var(--ink-2); font-weight: 400; } .top .sp { flex: 1; }  /* one baseline and one size with the name */
+.pill { border: 1px solid var(--field-edge); background: transparent; border-radius: var(--r-pill); padding: 7px 14px; font-size: 14px; color: var(--ink-2); cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; gap: 6px; min-height: 36px; }
+/* the language pill as narrow as the theme pill: on a 360-px phone Dashboard, EN, theme and Sign out stay on one row */
+#langBtn.pill { padding: 7px 11px; }
+.sect { margin: 8px 4px 0; font: 600 13px var(--sans); color: var(--ink-2); }
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+@media (min-width: 820px) { .tiles { gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 380px) { .tiles { grid-template-columns: 1fr; } }
+.tile { display: flex; flex-direction: column; gap: 6px; padding: 16px; text-align: left; cursor: pointer; min-width: 0; min-height: 132px; transition: transform .16s ease; }
+.tile:active { transform: scale(.985); }
+.tile .lab { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; color: var(--ink-2); font-size: 14px; }
+.tile .lab .more { margin-left: auto; color: var(--ink-3); font-size: 18px; line-height: 1; }
+.tile .val { font: 500 20px/1.2 var(--num); overflow-wrap: anywhere; }
+.tile .sub { color: var(--ink-2); font-size: 13px; margin-top: auto; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; }
+.tile .nm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+/* the dashboard's warning chip: outline + 135° hatching + the word, never colour alone */
+.rej { display: inline-flex; align-items: center; font: 500 12px var(--sans); color: var(--ink); padding: 3px 9px; border-radius: var(--r-pill);
+  border: 1px solid var(--warn); background: repeating-linear-gradient(135deg, color-mix(in srgb, var(--warn) 22%, transparent) 0 3px, transparent 3px 7px); }
+ .tile.idle .val { color: var(--ink-2); }  /* no opacity on the 14 px label */ .tile.idle .sub { color: var(--ink-3); }
+.tile .flag { width: 26px; height: 26px; }
+.dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); display: inline-block; flex: 0 0 auto; }
+.dot.off { background: var(--off); } .dot.bad { background: transparent; box-shadow: inset 0 0 0 2px var(--warn); width: 10px; height: 10px; }
+.state { display: inline-flex; align-items: center; gap: 7px; }
+/* no station yet: the pairing card */
+.pair { grid-column: 1 / -1; display: grid; gap: 10px; }
+.pair h3 { margin: 0; font: 600 17px/1.2 var(--num); }
+.pair p { margin: 0; }
+.steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: grid; gap: 10px; }
+.steps li { counter-increment: st; display: grid; grid-template-columns: 26px 1fr; gap: 10px; align-items: start; font-size: 14px; color: var(--ink-2); }
+.steps li::before { content: counter(st); width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center; font: 600 13px var(--num); color: var(--ink); background: var(--tint-a); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair); }
+.steps b { color: var(--ink); font-weight: 600; }
+.checklist { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.checklist li { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--ink-2); }
+.checklist li.done { color: var(--ink-3); text-decoration: line-through; }
+.checklist .box { width: 18px; height: 18px; border-radius: 5px; box-shadow: inset 0 0 0 1.5px var(--ink-3); flex: 0 0 auto; display: grid; place-items: center; font-size: 12px; }
+.checklist li.done .box { background: var(--ok); box-shadow: none; color: #fff; }
+.card { padding: 16px 18px; display: grid; gap: 10px; }
+
+/* sheet */
+.scrim { position: fixed; inset: 0; z-index: 20; background: var(--scrim); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.sheet { position: fixed; z-index: 21; left: 0; right: 0; bottom: 0; height: 88vh; height: 88dvh; display: flex; flex-direction: column;
+  border-radius: var(--r-sheet) var(--r-sheet) 0 0; border: 1px solid var(--edge); border-bottom: 0;
+  background: linear-gradient(var(--frost), var(--frost)), linear-gradient(180deg, var(--tint-a), var(--tint-b));
+  box-shadow: 0 -10px 40px rgba(0,0,0,.25), inset 0 1px 0 var(--rim); -webkit-backdrop-filter: blur(28px) saturate(170%); backdrop-filter: blur(28px) saturate(170%);
+  animation: rise .26s cubic-bezier(.2,.9,.3,1); }
+.sheet:focus { outline: none; }
+@keyframes rise { from { transform: translateY(40px); opacity: 0; } }
+@media (min-width: 820px) { .sheet { left: 50%; right: auto; bottom: auto; top: 50%; transform: translate(-50%, -50%); width: min(760px, calc(100vw - 48px)); height: auto; max-height: 88vh; border-radius: var(--r-sheet); border-bottom: 1px solid var(--edge); animation: none; } }
+.sheet header { display: flex; align-items: center; gap: 12px; padding: 18px 20px 8px; }
+/* the dashboard's handle: a full-width drag zone; dragging it (or the header) down closes the sheet on a phone */
+.grab { height: 26px; margin-bottom: -14px; display: flex; align-items: center; justify-content: center; cursor: grab; touch-action: none; flex: 0 0 auto; }
+.grab::before { content: ""; width: 40px; height: 5px; border-radius: 3px; background: var(--ink-3); opacity: .6; }
+@media (max-width: 819px) { .sheet header { touch-action: none; } }
+@media (min-width: 820px) { .grab { display: none; } }
+.sheet header .ic { width: 24px; height: 24px; }
+.sheet header .x { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--field-edge); background: transparent; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: var(--ink-2); }
+.sheet .body { flex: 1; overflow: auto; overscroll-behavior: contain; padding: 6px 20px 20px; display: grid; grid-template-columns: minmax(0, 1fr); grid-auto-rows: max-content; gap: 16px; align-content: start; }
+.sheet footer { display: flex; gap: 10px; align-items: center; padding: 12px 20px calc(14px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--grid); flex-wrap: wrap; }
+.sheet footer .msg { flex: 1; min-width: 150px; font-size: 14px; color: var(--ink-2); }
+.tabs { display: flex; gap: 4px; padding: 3px; border-radius: var(--r-pill); border: 1px solid var(--field-edge); overflow-x: auto; width: max-content; max-width: 100%; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { border: 0; background: transparent; border-radius: var(--r-pill); padding: 7px 14px; font-size: 14px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.tabs button[aria-selected="true"] { background: var(--tint-a); color: var(--ink); box-shadow: inset 0 1px 0 var(--rim), inset 0 0 0 1px var(--hair); }
+
+/* fields */
+.grid2 { display: grid; gap: 12px 16px; grid-template-columns: 1fr; }
+@media (min-width: 640px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+.fld { display: grid; gap: 6px; min-width: 0; align-content: start; }
+label.f { display: grid; gap: 6px; font-size: 14px; color: var(--ink-2); min-width: 0; }
+.input { display: flex; align-items: center; border: 1px solid var(--field-edge); background: var(--field); border-radius: var(--r-field); min-width: 0; }
+.input:focus-within { outline: 2px solid var(--ink); outline-offset: 2px; }
+.input.err { border-color: var(--bad); }
+.input input, .input select { flex: 1; min-width: 0; border: 0; background: transparent; padding: 10px 12px; outline: none; font-size: 15px; }
+/* a select sized to its content, not a full-width bar that hides its value; label above, hint below */
+.input:has(> select) { width: auto; min-width: 12ch; max-width: 320px; justify-self: start; align-self: flex-start; }
+.input select option { background: var(--solid); color: var(--ink); }
+.input .unit { padding: 0 12px; color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+.toggle { display: flex; align-items: flex-start; gap: 12px; cursor: pointer; }
+.toggle input { appearance: none; -webkit-appearance: none; width: 44px; height: 26px; border-radius: 13px; background: var(--grid); position: relative; flex: 0 0 auto; cursor: pointer; margin: 0; transition: background .15s; }
+.toggle input::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--ink); transition: transform .15s; }
+.toggle input:checked { background: var(--ok); } .toggle input:checked::after { transform: translateX(18px); background: #fff; }
+.toggle span { display: grid; gap: 2px; } .toggle small { color: var(--ink-3); font-size: 13px; }
+.toggle input:disabled, select:disabled { opacity: .45; cursor: not-allowed; }
+.btn { border: 0; border-radius: var(--r-pill); padding: 10px 18px; min-height: 42px; font-weight: 600; cursor: pointer; }
+/* a button with no modifier takes the secondary look (a bare .btn would draw as the browser's grey and read as disabled) */
+.rowsw { margin-left: 8px; }  /* a forwarding row's on / off switch */
+/* the Airport weather lists as glass rows, the action on the right (without a rule ul.list shows bullets, no layout) */
+ul.list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+ul.list > li { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 16px; }
+ul.list > li > div { flex: 1; min-width: 0; }
+.dot.late { background: var(--warn); }  /* an airport report 60-90 min old */
+/* three sizes in an airport row -- the name 16, now / forecast 15, the rest 13 (.hint); the app's round flag */
+ul.list .flag { width: 18px; height: 18px; vertical-align: -3px; margin-right: 6px; }
+ ul.list .an { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; } ul.list .an > .flag { align-self: center; } .nmb { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }  /* the texts on one baseline; the dot sits on it (its middle at the small text's) */ ul.list .an b { font-size: 16px; }
+ul.list .av { font-size: 15px; color: var(--ink); margin-top: 2px; }
+.btn:not(.primary):not(.danger) { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.btn.primary { background: var(--ink); color: var(--sky-top); }
+.btn.quiet { background: transparent; color: var(--ink); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.btn.danger { background: var(--bad); color: #fff; }
+.btn.quiet.bad { color: var(--bad); }
+.row.forget { margin-top: 6px; padding-top: 14px; border-top: 1px solid var(--grid); } .row.forget .sp { flex: 1; min-width: 180px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.row.end { justify-content: flex-end; }
+.link { border: 0; background: none; padding: 4px 0; color: var(--ink); text-decoration: underline; text-underline-offset: 3px; cursor: pointer; font-size: 14px; text-align: left; }
+a.link { text-decoration: none; }  /* a link to a page (See your station, Licenses) has no underline; a link-styled button keeps it */
+.callout { padding: 12px 14px; border-radius: 14px; background: var(--row); border: 1px solid var(--grid); font-size: 14px; color: var(--ink-2); display: grid; gap: 4px; }
+.callout b { color: var(--ink); } .callout.warn { border-color: var(--warn); }
+.kv { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; font-size: 14px; }
+.kv dt { color: var(--ink-3); } .kv dd { margin: 0; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.secret { font: 600 18px var(--mono); letter-spacing: .04em; padding: 10px 14px; border-radius: var(--r-field); background: var(--field); border: 1px solid var(--field-edge); }
+.nets { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.nets button { width: 100%; display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 0; background: transparent; border-radius: 10px; cursor: pointer; text-align: left; min-height: 44px; }
+.nets button[aria-pressed="true"] { background: var(--tint-a); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.nets .name { flex: 1; }
+
+/* station sheet */
+.acc { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.acc > li { border-radius: 14px; background: var(--row); }
+.acc > li.open { box-shadow: inset 0 0 0 1px var(--field-edge); } .acc > li.bad { box-shadow: inset 0 0 0 1px var(--bad); }
+.acc-h { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto 16px; grid-template-areas: "i l v c" ". s s s"; gap: 2px 12px; align-items: center; padding: 11px 14px; border: 0; background: transparent; cursor: pointer; text-align: left; border-radius: 14px; min-height: 48px; }
+@media (min-width: 640px) { .acc-h { grid-template-columns: 22px minmax(0, 1fr) 7.5em minmax(0, 1.3fr) 16px; grid-template-areas: "i l v s c"; } }
+.acc-i { grid-area: i; display: grid; place-items: center; }
+.acc-l { grid-area: l; font-weight: 500; } .acc-v { grid-area: v; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.acc-s { grid-area: s; font-size: 13px; color: var(--ink-2); min-width: 0; } .acc-c { grid-area: c; color: var(--ink-3); transition: transform .15s; }
+.acc-h[aria-expanded="true"] .acc-c { transform: rotate(90deg); }
+.acc-b { padding: 4px 14px 14px; display: grid; gap: 10px; }
+/* station console: raw lines, wrapped (never sideways scrolling), scrolls inside itself */
+.logbar { gap: 8px; } .logbar .sp { flex: 1 1 200px; } .logbar .btn { min-height: 36px; padding: 7px 16px; }
+.console { margin: 0; height: min(52vh, 420px); overflow-y: auto; padding: 10px 12px; border-radius: 12px; background: var(--field); border: 1px solid var(--field-edge); font: 12px/1.55 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink-2); }
+.grid3 { display: grid; gap: 10px; grid-template-columns: 1fr 1fr; } @media (min-width: 640px) { .grid3 { grid-template-columns: 1fr 1fr 1fr; } }
+.grid3 .fld:last-child { grid-column: 1 / -1; } @media (min-width: 640px) { .grid3 .fld:last-child { grid-column: auto; } }
+.rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.rules li { display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; font-size: 14px; padding: 8px 12px; border-radius: 12px; background: var(--row); }
+.rules li b { font-variant-numeric: tabular-nums; } .rules li small { color: var(--ink-3); font-size: 12.5px; grid-column: 1 / -1; }
+.rules li.hot b { color: var(--warn-t); }
+.extras { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.extras li { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--row); flex-wrap: wrap; }
+.extras code { font-family: var(--mono); font-size: 13px; } .extras .sp { flex: 1; min-width: 120px; }
+.promo { border: 1px solid var(--field-edge); border-radius: 18px; padding: 14px; display: grid; gap: 12px; }
+.preview { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; font-size: 14px; color: var(--ink-2); }
+.preview b { font: 600 20px var(--num); color: var(--ink); }
+/* the Learning and Weather description blocks (one style): glyph, title · value, a meter on Learning, the sentence */
+.lb { display: grid; grid-template-columns: 24px 1fr auto; gap: 2px 12px; padding: 12px; border-radius: 14px; background: color-mix(in srgb, var(--ink) 6%, transparent); margin-bottom: 8px; }
+.lb > .ic { width: 24px; height: 24px; grid-row: span 3; } .lb > .ic.dim { color: var(--ink-3); }
+.lb b { font-size: 15px; font-weight: 600; } .lb b span { font-weight: 400; color: var(--ink-2); }
+.lb p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--ink-2); grid-column: 2/4; } .lb p.nt { font-size: 13px; color: var(--ink-3); }
+.lb.w > .ic, .lb.w b { color: var(--warn); }
+.lv { display: flex; gap: 3px; padding-top: 7px; } .lv i { width: 18px; height: 5px; border-radius: 3px; background: color-mix(in srgb, var(--ink) 14%, transparent); }
+button.lv { border: 0; background: none; padding: 7px 0 0; margin: 0; cursor: help; align-self: start; } .lv i.on { background: var(--ok); }
+.lsky { border-radius: 12px; background: color-mix(in srgb, var(--ink) 4%, transparent); padding: 8px; }
+/* the bridge's status row (core.js healthRow) over the Details */
+.health { border-radius: var(--r-m); padding: 0 18px; }
+.health summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px 14px; min-height: 48px; }
+.health summary::-webkit-details-marker { display: none; }
+.health summary::after { content: attr(data-more); margin-left: auto; font-size: 13px; color: var(--ink-3); white-space: nowrap; }
+.health[open] summary::after { content: attr(data-less); }
+.health .states { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.health .state svg { width: 18px; height: 18px; display: block; color: var(--ok); } .health .state.warn svg { color: var(--warn); }
+.hgrid { display: grid; gap: 4px 28px; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); padding: 2px 0 16px; }
+.hgrid h3 { margin: 10px 0 4px; font: 600 13px var(--sans); color: var(--ink-2); }
+.hgrid dl { margin: 0; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; font-size: 13px; }
+.hgrid dt { color: var(--ink-2); } .hgrid dd { margin: 0; text-align: right; }
+details.adv { border-top: 1px solid var(--grid); padding-top: 12px; }
+details.adv summary { cursor: pointer; color: var(--ink-2); font-size: 14px; }
+details.adv[open] summary { margin-bottom: 12px; }
+.sessions { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.sessions li { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border-radius: 14px; background: var(--row); flex-wrap: wrap; }
+.sessions .sp { flex: 1; min-width: 160px; } .sessions small { color: var(--ink-3); }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 30; padding: 10px 16px; border-radius: var(--r-pill); font-size: 14px; background: var(--solid); border: 1px solid var(--edge); box-shadow: var(--drop); max-width: calc(100vw - 32px); }
+.pk { display: grid; gap: 10px; }
+.pk-crumbs { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; font-size: 14px; }
+.pk-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; max-height: 300px; overflow: auto; overscroll-behavior: contain; }
+.pk-list button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 0; background: transparent; border-radius: 12px; cursor: pointer; text-align: left; min-height: 46px; color: inherit; font: inherit; }
+.pk-list button[aria-pressed="true"] { background: var(--tint-a); box-shadow: inset 0 0 0 1px var(--field-edge); }
+.pk-list .pk-main { flex: 1; min-width: 0; }
+.pk-list small { color: var(--ink-3); font-size: 13px; white-space: nowrap; }
+.pk-empty { padding: 10px 12px; }
+.flag { width: 22px; height: 22px; border-radius: 50%; flex: 0 0 auto; box-shadow: 0 0 0 1px var(--grid); }
+.flag.none { display: inline-grid; place-items: center; font-size: 9px; color: var(--ink-3); }
+.picked { display: flex; gap: 12px; align-items: center; }
+.picked .flag { width: 32px; height: 32px; }
+[hidden] { display: none !important; }
+@media (prefers-reduced-motion: reduce) { .tile, .tile:active { transition: none; transform: none; } .sheet { animation: none; } .toggle input, .toggle input::after { transition: none; } }

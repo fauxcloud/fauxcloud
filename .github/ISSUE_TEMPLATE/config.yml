@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ideas and questions
+    url: https://github.com/fauxcloud/fauxcloud/discussions
+    about: Feature ideas, questions, show and tell. Open an issue only for a bug or a console report.
+  - name: Report a security problem (private)
+    url: https://github.com/fauxcloud/fauxcloud/security/advisories/new
+    about: Never in a public issue. Only the maintainer sees this form.
+  - name: Is my console supported?
+    url: https://github.com/fauxcloud/fauxcloud/blob/main/docs/station-profiles.md
+    about: What has been checked on each console, its known quirks, and what is not verified yet.
+  - name: Questions and answers (FAQ)
+    url: https://github.com/fauxcloud/fauxcloud#faq
+    about: Drizzle, snow, the pressure jump, the board's light, browsers and more.

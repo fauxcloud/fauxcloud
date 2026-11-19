@@ -1,0 +1,38 @@
+# tools/i18n-allow.txt -- what `i18n_inventory.py --check` lets stand outside a W table on the dashboard's files.
+# One entry per line: `file: exact text` or `*: /regex/`, then two spaces, `#` and the reason. An entry that matches
+# nothing fails the check (the list cannot rot).
+index.html: This page needs JavaScript. The raw data is at /api/live.  # <noscript>: no script, no pack
+lang.js: English  # an endonym: each language by its own name
+lang.js: second  # an Intl unit name
+lang.js: minute  # an Intl unit name
+health.js: /^(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)$/  # the English month names; another language takes them from Intl (lang.js FC.L.mon)
+core.js: · <a>GitHub</a>  # a product name and its link
+core.js: light  # a theme code (dataset.theme)
+sky.js: {}px {}px  # a CSS value
+dash-airport.js: nocloud  # a sky key (skyKey / headKey)
+dash-wufc.js: /^(Morning|Afternoon)$/  # inside the WU phrase (ph()), which stays English as WU sends it
+*: /^(pointerenter|pointerleave|focusin|focusout)$/  # event names
+dash-wufc.js: today  # a WU day key (b.day)
+outlook-why.js: sleet_snow  # a state code (comparison)
+outlook-why.js: ic dim  # CSS classes
+dash-sheet.js: feels  # a field key of the Now row
+dash-sheet.js: change  # an event name
+dash-sheet.js: /^(rain since the reading before|UV index|rain rate max \(\{\}\/h\)|gust max \(\{\}\)|wind direction \(°\)|wind direction \(compass\)|dew point|humidity|wind direction|rain today|gust|readings|calm hours|samples|rejected|hours from |closed)$/  # Export CSV's headers and status: a machine interface, English (exportCsv, recCsv)
+dash.js: humidity  # a field key
+dash.js: from  # a key suffix of the hero's aria templates (a_w_from)
+dash.js: area  # a chart kind (t24)
+dash.js: today  # the range code
+tendency.js: humidity  # a field key
+admin.html: This page needs JavaScript.  # <noscript>: no script, no pack
+admin-fwd.js: /^(Morning|Afternoon)$/  # inside the WU phrase (ph()), which stays English as WU sends it
+admin-fwd.js: /^(Weather Underground|Windy|PWSweather)$/  # the services' names
+admin-fwd.js:  checked  # an HTML attribute
+admin-fwd.js: /^(http|password|today|noanswer|fhost|fpath|furl|fsucc|fhttps|fkey)$/  # codes and field ids
+admin-learn.js: /^(medium|high)$/  # confidence codes
+admin-metar.js: waiting  # a state code
+admin-sheets.js: /^(username|password|cdpw|wrong password|locked)$/  # autocomplete and input types, an element id, firmware error codes compared
+admin-station.js: /^(FtoC|InHgToHpa|MphToKmh|InToMm)$/  # conversion ids
+admin-station.js: Generic WU  # a profile's product name
+admin-station.js: /^(humidity|sunc|parse|bounds|measurement|moisture|precipitation|illuminance|irradiance|voltage|general|filters|generic|pscale|ptype|pconv|ftype|maxst)$/  # field keys, HA classes, rule codes, tab ids, element ids
+adminface.js:  checked  # an HTML attribute
+adminface.js: /^(security|maint|no challenge|sensor|change|aprev)$/  # sheet keys, an internal error code, the slug fallback key, an event name, an element id

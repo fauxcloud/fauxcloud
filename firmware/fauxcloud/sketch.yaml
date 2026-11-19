@@ -1,0 +1,12 @@
+# arduino-cli build profile for the product firmware: the pinned core, no libraries.
+# Build:  tools\build.ps1 fauxcloud            Flash:  tools\build.ps1 fauxcloud -Port COM5 -Upload
+# No third-party libraries: esp_http_server and esp_mqtt_client ship inside the pinned core, JSON is snprintf.
+# partitions.csv in this folder replaces the board's table automatically.
+profiles:
+  esp32dev:
+    fqbn: esp32:esp32:esp32:PartitionScheme=custom
+    platforms:
+      - platform: esp32:esp32 (3.3.12)
+        platform_index_url: https://espressif.github.io/arduino-esp32/package_esp32_index.json
+    libraries: []
+default_profile: esp32dev

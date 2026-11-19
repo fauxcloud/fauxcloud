@@ -1,0 +1,12 @@
+# Project-local arduino-cli configuration (pass with --config-file, done by tools/build.ps1).
+# Keeps platforms, downloads and libraries inside the repo (.arduino/, gitignored) so the build never
+# depends on -- or pollutes -- the machine's Arduino IDE installation.
+directories:
+  data: .arduino/data
+  downloads: .arduino/downloads
+  user: .arduino/user
+board_manager:
+  additional_urls:
+    - https://espressif.github.io/arduino-esp32/package_esp32_index.json
+library:
+  enable_unsafe_install: false

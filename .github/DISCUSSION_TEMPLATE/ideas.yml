@@ -1,0 +1,19 @@
+# The form of the Discussions category "Ideas": the file name must equal the category's slug, or GitHub ignores it.
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What would it do and for whom?
+    validations:
+      required: true
+  - type: textarea
+    id: today
+    attributes:
+      label: What do you do today instead?
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before you send it
+      options:
+        - label: I looked for an existing idea first
+          required: true
