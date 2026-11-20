@@ -26,14 +26,14 @@ jobs:
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5.6.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0  # v7.1.0
         with:
           python-version: "3.12"
       # the site build runs the web asset generator: terser through node, zopfli from tools/.pylib (as build.yml)
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020  # v4.4.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1  # v7.1.0
         with:
           node-version: "20"
       - name: Pinned generator tools (terser), no install scripts
@@ -72,7 +72,7 @@ jobs:
       # row against the zip actually served (present, size, SHA-256); the folder must equal the checked build exactly
       - name: Check the built site as it will be served
         run: python -I tools/build_site.py --check --firmware-extra "$RUNNER_TEMP/firmware" --served site/_build
-      - uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b  # v5.0.0
+      - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d  # v6.0.0
       # v5 pins its own upload-artifact by commit (v3 used the tag `upload-artifact@v4`, which the repository's
       # SHA-pin rule refuses) and leaves dot folders out unless asked: include-hidden-files keeps
       # /.well-known/security.txt in the site (.git and .github stay excluded regardless)
