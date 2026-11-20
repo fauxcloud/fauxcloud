@@ -3,7 +3,7 @@
 fauxcloud is ESP32 firmware that stands in for Weather Underground for a Wi-Fi weather console. It answers the
 console's upload, keeps a short history and publishes to MQTT with Home Assistant discovery. This page describes
 every HTTP route, the MQTT topics and the data fields, written from the code of the release it ships with (checked
-against firmware 1.0.0-rc.1). **The code is the source of truth.**
+against firmware 1.0.0). **The code is the source of truth.**
 
 fauxcloud is an independent open-source project, not affiliated with or endorsed by Weather Underground / The Weather
 Company, Weathercloud, Windy, WOW-BE (wow.meteo.be) or the Met Office's WOW, PWSweather, Home Assistant, NOAA /
