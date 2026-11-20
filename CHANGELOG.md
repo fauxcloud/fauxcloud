@@ -7,6 +7,24 @@ release notes, so every release needs its own `## [<version>]` section before it
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-20
+
+The first stable release of fauxcloud. The firmware is the same as 1.0.0-rc.1 apart from its version string, so
+everything in the [1.0.0-rc.1 notes](https://github.com/fauxcloud/fauxcloud/releases/tag/v1.0.0-rc.1) applies to
+it. It was verified on one console: a Vevor 7-in-1, model YT60234, firmware 1.0.1, EU 868 MHz; see
+[docs/station-profiles.md](docs/station-profiles.md) for what was and was not checked.
+
+### Changed
+- **Browser installer:** the steps to set the board up (replug it, join its setup Wi-Fi, open the setup page, answer
+  the four steps, open `fauxcloud.local`) now appear after a flash, next to the QR code; the form then shrinks to one
+  "Flash another board" button. The driver help opens when no board is found or a flash fails, and the flashing log
+  has a Copy button for bug reports.
+- **Website:** an Install link in the header of every page; the docs sidebar names its first group "Start" and shows
+  each label once on a phone; the diagram on the front page says "Home Wi-Fi" instead of "LAN".
+- **README** opens with the project's header and links to the installer, Get started and the demo.
+- **Release notes** link the project's own copy of the Arduino-ESP32 core used for the build,
+  https://github.com/fauxcloud/arduino-esp32/tree/3.3.12.
+
 ## [1.0.0-rc.1] - 2026-11-19
 
 The first public release candidate of fauxcloud. It was verified on one console: a Vevor 7-in-1, model YT60234,
