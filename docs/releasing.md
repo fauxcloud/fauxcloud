@@ -89,7 +89,9 @@ not saved** (not erased). Over USB, the factory zip of the previous release work
 | `SHA256SUMS` | SHA-256 of every asset above. | Checking a download: `sha256sum -c SHA256SUMS --ignore-missing`. |
 
 Every release body says where the source is: this repository at the release's tag, built with the pinned Arduino-ESP32
-core from `firmware/fauxcloud/sketch.yaml`; `tools/build.ps1` or the CI workflow rebuilds the image.
+core from `firmware/fauxcloud/sketch.yaml`; `tools/build.ps1` or the CI workflow rebuilds the image. The body also
+links the core's upstream source at that version and the project's own copy,
+https://github.com/fauxcloud/arduino-esp32/tree/3.3.12. The wording lives in `.github/RELEASE_TEMPLATE.md`.
 
 ## Installing
 

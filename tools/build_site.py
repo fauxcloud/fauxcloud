@@ -87,14 +87,14 @@ SITE_URL = "https://fauxcloud.org"
 REPO_URL = "https://github.com/fauxcloud/fauxcloud"
 TAGLINE = "local weather bridge for Wi-Fi weather stations"
 SOCIAL = "assets/social.png"  # 1280 x 640, made from a private source (site/README.md, "The share card")
-NAV = [("Get started", "/docs/get-started/"), ("Compatibility", "/docs/compatibility/"),
+NAV = [("Get started", "/docs/get-started/"), ("Install", "/install/"), ("Compatibility", "/docs/compatibility/"),
        ("Home Assistant", "/docs/home-assistant/"), ("Docs", "/docs/"), ("Demo", "/try/"), ("GitHub", REPO_URL)]
-GROUPS = ["Get started", "Boards", "Use it", "Home Assistant", "Online, if you want it", "Help and reference", "Project"]
+GROUPS = ["Start", "Boards", "Use it", "Home Assistant", "Online, if you want it", "Help and reference", "Project"]
 # the docs pages in reading order: slug, source (repo path), sidebar group, and the title / lede of a file that has no
 # front matter (the root files stay plain GitHub Markdown)
 DOCS = [
-    ("get-started", "docs/get-started.md", "Get started", None, None),
-    ("flash", "docs/flash.md", "Get started", None, None),
+    ("get-started", "docs/get-started.md", "Start", None, None),
+    ("flash", "docs/flash.md", "Start", None, None),
     ("boards", "docs/boards.md", "Boards", None, None),
     ("dashboard", "docs/dashboard.md", "Use it", None, None),
     ("outlook", "docs/outlook.md", "Use it", None, None),
@@ -340,7 +340,10 @@ class Docs:
                     PHOTO_SIZES["tall" if tall else "wide"], w, h, html.escape(alt, quote=True),
                     "<figcaption>%s</figcaption>" % caption if caption else ""))
 
-    def sidebar(self, current):
+    def sidebar(self, current, here=None):
+        """A label and a list per group. A group named like one of its pages (Boards, Home Assistant) has no label:
+        that page's row says it. The label of the current page's group (`here`, the phone sheet's summary) is marked,
+        so the sheet can hide it where it would sit right under that summary (site.css)."""
         out = []
         for grp in GROUPS + ["Index"]:
             items = [p for p in self.pages if p["group"] == grp]
@@ -348,7 +351,9 @@ class Docs:
                 items = [{"url": ALL_PAGES, "title": "All pages"}]
             if not items:
                 continue
-            out.append("        <h4>%s</h4>\n        <ul>%s</ul>" % (grp, "".join(self.entry(p, current) for p in items)))
+            label = "" if any(p["title"] == grp for p in items) else "        <h4%s>%s</h4>\n" % (
+                ' class="here"' if grp == here else "", grp)
+            out.append("%s        <ul>%s</ul>" % (label, "".join(self.entry(p, current) for p in items)))
         return "\n".join(out)
 
     def entry(self, p, current):
@@ -389,7 +394,7 @@ class Docs:
             pn.append('<div class="nx"><small>Next</small><a class="btn primary" href="%s">%s</a></div>'
                       % (seq[i + 1]["url"], html.escape(seq[i + 1]["title"])))
         return fill(template("docs.html"), {
-            "group": html.escape(p["group"]), "sidebar": self.sidebar(p["url"]), "heading": html.escape(p["title"]),
+            "group": html.escape(p["group"]), "sidebar": self.sidebar(p["url"], p["group"]), "heading": html.escape(p["title"]),
             "lede": '      <p class="lede">%s</p>' % site_md.Inline(lambda t: self.link(p["src"], t))(p["lede"]) if p["lede"] else "",
             "body": p["body"], "pn": '<nav class="pn" aria-label="Previous and next">%s</nav>' % "".join(pn)})
 

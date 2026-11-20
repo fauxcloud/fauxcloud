@@ -125,6 +125,14 @@ precedence = "aggregate"
 SPDX-FileCopyrightText = ["2026 Lucide Icons and Contributors", "2013-present Cole Bemis", "2014 The Nunito Project Authors"]
 SPDX-License-Identifier = "ISC AND MIT AND OFL-1.1"
 
+# the README's header image: the mark and the Nunito SemiBold wordmark outlines (OFL 1.1) from the sprite above, on
+# our own drawing of the site's top bar
+[[annotations]]
+path = ".github/fauxcloud-header.svg"
+precedence = "aggregate"
+SPDX-FileCopyrightText = ["2026 the fauxcloud authors", "2014 The Nunito Project Authors"]
+SPDX-License-Identifier = "GPL-3.0-or-later AND OFL-1.1"
+
 # the site's browser installer: esptool-js's browser bundle, vendored unmodified (site/SOURCES.md), with pako and
 # atob-lite inside; the licence texts are in site/THIRD_PARTY_NOTICES_SITE.txt
 [[annotations]]

@@ -1,4 +1,6 @@
-# fauxcloud
+<h1 align="center"><a href="https://fauxcloud.org"><img src=".github/fauxcloud-header.svg" alt="fauxcloud" width="280"></a></h1>
+
+<p align="center"><a href="https://fauxcloud.org/install/">Install in the browser</a> · <a href="https://fauxcloud.org/docs/get-started/">Get started</a> · <a href="https://fauxcloud.org/try/">Try the demo</a></p>
 
 **Your weather station's cloud, in your own home.**
 Keep your Wi-Fi weather station working, without the internet, an app or router tricks.
@@ -266,8 +268,8 @@ Contributions are welcome within the rules in [CONTRIBUTING.md](CONTRIBUTING.md)
 Source: this repository at tag `v<version>`. Built with the Arduino-ESP32 core 3.3.12 (ESP-IDF v5.5.5 `b774170`,
 lib-builder `6671d0b`, toolchain xtensa-esp-elf 14.2.0_20260121) from `firmware/fauxcloud/sketch.yaml`;
 `tools/build.ps1` or the CI workflow rebuilds the same image. The core's source at that version:
-https://github.com/espressif/arduino-esp32/tree/3.3.12 (the project will also keep its own copy at that version and link
-it here once it exists).
+https://github.com/espressif/arduino-esp32/tree/3.3.12 (the project keeps a copy at
+https://github.com/fauxcloud/arduino-esp32/tree/3.3.12).
 
 - The toolchain is pinned in the sketch's `sketch.yaml` profile and installed by `arduino-cli` into a folder of the
   checkout. `tools\build.ps1 fauxcloud` builds the release image; the CI workflow (`.github/workflows/build.yml`)
