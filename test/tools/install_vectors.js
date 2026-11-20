@@ -3,7 +3,8 @@
 // reader against a factory zip written by tools/release_assets.py itself (Python's zipfile, deflate), parts.json and its
 // refusals, the partition table and the settings (NVS) guard, MD5 against node's crypto, the setup Wi-Fi name from the
 // MAC, the Wi-Fi QR payload, and the QR encoder against reference matrices of the qrcode package for all eight masks
-// (install_qr_fixture.json, test/tools/gen_install_qr.py).
+// (install_qr_fixture.json, test/tools/gen_install_qr.py), and the state -> card mapping (view(): the post-flash block
+// only after DONE, the form shrunk to its one button there) against the page's markup.
 // Usage: node test/tools/install_vectors.js   (python on PATH for the factory-zip case)
 'use strict';
 const fs = require('fs');
@@ -17,7 +18,7 @@ const ROOT = path.join(__dirname, '..', '..');
 vm.runInThisContext(fs.readFileSync(path.join(ROOT, 'site', 'install', 'install.js'), 'utf8'), { filename: 'install.js' });
 /* global STATES, MOVES, nextState, stateWord, percent, errorSentence, zipIndex, zipRead, parseParts, partTable,
    keepsSettings, md5hex, sha256hex, setupSsid, wifiQrText, qrEncode, qrPenalty, qrSvg, ROLES, SAY, fixedPlaces,
-   layoutVerdict, rowReady, pickVersion, versionLabel, readFactory, makeInstaller, esc */
+   layoutVerdict, rowReady, pickVersion, versionLabel, readFactory, makeInstaller, esc, view */
 
 let fail = 0, pass = 0;
 function check(name, got, want) {
@@ -44,7 +45,7 @@ async function rejects(name, p, words) {
     connecting: { cancel: 'noboard', linked: 'connected', fail: 'failed', lost: 'failed' },
     connected: { flash: 'flashing', board: 'usb', unboard: 'select', fail: 'failed', lost: 'failed' },
     flashing: { done: 'done', fail: 'failed', lost: 'failed' },
-    done: { board: 'usb', unboard: 'select', connect: 'connecting' }
+    done: { board: 'usb' }
   };
   check('states', Object.keys(STATES).sort(), Object.keys(WANT).sort());
   for (const s of Object.keys(WANT)) for (const ev of EVENTS) check('move ' + s + ' --' + ev, nextState(s, ev), WANT[s][ev] || s);
@@ -64,6 +65,50 @@ async function rejects(name, p, words) {
     ['FLASHING 0 %', 'FLASHING 42 %', 'FLASHING 100 %']);
   check('icons in the sprite', Object.values(STATES).every(s =>
     fs.readFileSync(path.join(ROOT, 'site', 'templates', 'sprite.svg'), 'utf8').includes('<symbol id="' + s[1] + '"')), true);
+
+  // ---- 1b. the state -> card mapping: the post-flash block and the QR only after a flash; the form shrinks to its one
+  // button there; FAILED keeps the full form and its own sentence, never the block
+  const VIEW = {
+    select: { next: false, qr: false, opts: true, quiet: false, bar: false, help: false },
+    usb: { next: false, qr: false, opts: true, quiet: false, bar: false, help: false },
+    connecting: { next: false, qr: false, opts: true, quiet: false, bar: false, help: false },
+    connected: { next: false, qr: false, opts: true, quiet: false, bar: false, help: false },
+    flashing: { next: false, qr: false, opts: true, quiet: false, bar: true, help: false },
+    done: { next: true, qr: true, opts: false, quiet: true, bar: false, help: false },
+    noboard: { next: false, qr: false, opts: true, quiet: false, bar: false, help: true },
+    failed: { next: false, qr: false, opts: true, quiet: false, bar: false, help: true }
+  };
+  check('view: every state', Object.keys(STATES).sort(), Object.keys(VIEW).sort());
+  for (const st of Object.keys(VIEW)) check('view ' + st, view(st, { qr: '<svg/>' }), VIEW[st]);
+  check('view: a failure that is not about the board leaves the driver help alone', [view('failed', { noHelp: true }).help,
+    view('failed', {}).help, view('noboard', { noHelp: true }).help], [false, true, false]);
+  check('view: DONE without a MAC has the block, no QR', [view('done', { qr: '' }).next, view('done', { qr: '' }).qr, view('done').qr],
+    [true, false, false]);
+  check('view: the block only in DONE', Object.keys(STATES).filter(st => view(st, {}).next), ['done']);
+  check('view: the form shrinks only in DONE', Object.keys(STATES).filter(st => !view(st, {}).opts), ['done']);
+  // the markup view() drives: the block is hidden in the page as served (before a flash it never renders), sits in the
+  // card's top part under the state and the QR, before the form; the form's controls are one hideable group, the button
+  // outside it
+  const page = fs.readFileSync(path.join(ROOT, 'site', 'templates', 'install.html'), 'utf8');
+  const at = re => { const m = re.exec(page); return m ? m.index : -1; };
+  check('markup: the block is hidden as served', /<div class="fl-next" id="fl-next" hidden>/.test(page), true);
+  check('markup: the block under the state, inside the card, before the form',
+    at(/id="fl-state"/) < at(/id="fl-next"/) && at(/id="fl-qr"/) < at(/id="fl-next"/) && at(/<section class="fl"/) < at(/id="fl-next"/) &&
+    at(/id="fl-next"/) < at(/class="fl-ctl"/), true);
+  check('markup: one block only', (page.match(/Next: set it up/g) || []).length, 1);
+  const opts = page.slice(at(/id="fl-opts"/), at(/id="fl-go"/));
+  check('markup: Board, Version and the erase box in the group, the button after it',
+    ['id="fl-board"', 'id="fl-ver"', 'id="fl-erase"'].map(w => opts.includes(w)).concat(at(/id="fl-opts"/) > 0, /<\/div>\s*<button [^<]*$/.test(opts)),
+    [true, true, true, true, true]);
+  const next = page.slice(at(/id="fl-next"/), at(/class="fl-ctl"/));
+  check('markup: the steps of the block', ['fauxcloud-setup-XXXX', 'http://fauxcloud.setup', 'four steps', 'http://fauxcloud.local',
+    'Its LED should now blink fast, four times a second. If it does not, do this once more.', 'Go on with Get started', 'id="fl-ssid"', 'id="fl-ssid-note"']
+    .map(w => next.includes(w)), [true, true, true, true, true, true, true, true]);
+  // the driver help is folded as served (view().help lights and opens it after NO BOARD / FAILED); the log has its Copy
+  check('markup: the driver help folded', /<details class="fl-help" id="fl-help"><summary>No USB port in the browser's list\?<\/summary>/.test(page), true);
+  check('markup: the QR clause is its own span (hidden without a QR)', /<span id="fl-qr-say">scan the QR code on this page, or <\/span>pick the name in the phone's Wi-Fi list\./.test(next), true);
+  check('markup: the setup steps link the setup section of Get started', next.includes('<a href="/docs/get-started/#set-up-fauxcloud">four steps</a>'), true);
+  check('markup: the log has a Copy button', /<details class="fl-log"><summary>Flashing log<\/summary><div class="fl-logbar"><button type="button" id="fl-copy">Copy<\/button><\/div><pre id="fl-log">/.test(page), true);
 
   // ---- 2. the percentage of the whole write
   const sizes = [24992, 3072, 8192, 1751664];
@@ -289,12 +334,13 @@ R.write_zip(sys.argv[1], ent)
     let pi = 0;
     const inst = makeInstaller({
       ui: {
-        show: (s, a) => { R.states.push(s); R.said.push(a); R.aux.push(a); }, aux: a => R.aux.push(a), progress: (p, t) => { R.pct = p; if (t) R.aux.push(t); },
+        show: (s, a, op) => { R.states.push(s); R.said.push(a); R.aux.push(a); R.opts = op; }, aux: a => R.aux.push(a), progress: (p, t) => { R.pct = p; if (t) R.aux.push(t); },
         button: (l, on) => R.buttons.push([l, on]), lock: ph => R.locks.push(ph), log: t => R.logs.push(t),
         untick: () => { R.unticked++; R.erase = false; }
       },
       version: () => R.row, erase: () => R.erase,
       requestPort: async () => {
+        R.asked = (R.asked || 0) + 1;
         if (o.cancel) throw new Error('No port selected by the user.');
         if (o.choose) return o.choose(pi++);
         return ports[Math.min(pi++, ports.length - 1)];
@@ -328,11 +374,17 @@ R.write_zip(sys.argv[1], ent)
     [[0x1000, 0x8000, 0xE000, 0x10000], false, 'function']);
   check('flow: the board table was read first', R.read, [0x8000, 0xC00]);
   check('flow: the transport closed after', R.closed, [1]);
-  check('flow: done says the settings are kept', /settings, if it had any, are kept/.test(R.said[R.states.lastIndexOf('done')]), true);
+  check('flow: done says the settings are kept', /\. Any settings it had were kept\./.test(R.said[R.states.lastIndexOf('done')]), true);
+  check('flow: DONE brings the setup Wi-Fi and its QR, the one button', [R.opts.ssid, /^<svg /.test(R.opts.qr), view('done', R.opts).qr,
+    R.btn()], ['fauxcloud-setup-0A9B', true, true, ['Flash another board', true]]);
+  await R.inst.press();
+  check('flow: Flash another board brings the form back, no port chooser', [R.last(), R.btn(), R.asked, view(R.last(), R.opts).opts,
+    view(R.last(), R.opts).next, /Plug the board/.test(R.lastAux())], ['usb', ['Connect', true], 1, true, false, true]);
 
   R = rig({ writeFails: 'MD5 of file does not match data in flash!' });
   R.inst.board(true); await R.inst.press(); await R.inst.press();
   check('flow: MD5 after the write', [R.last(), R.lastAux()], ['failed', 'The write did not verify. Unplug the board, plug it in again and install again.']);
+  check('flow: FAILED keeps its sentence and the full form, no block', [view(R.last(), R.opts).next, view(R.last(), R.opts).opts], [false, true]);
   check('flow: the erase box is unticked after FAILED too', R.unticked, 1);
 
   const other2 = Buffer.from(tbl); other2.writeUInt32LE(0x6000, 8);
@@ -342,7 +394,7 @@ R.write_zip(sys.argv[1], ent)
     ['failed', 'This board has a different flash layout. Tick Erase everything, settings included, and press Connect, then install again.', 0]);
   R = rig({ board: new Uint8Array(other2), erase: true });
   R.inst.board(true); await R.inst.press(); await R.inst.press();
-  check('flow: another layout with the erase box', [R.last(), R.writes[0].eraseAll, /freshly erased/.test(R.said[R.states.lastIndexOf('done')])], ['done', true, true]);
+  check('flow: another layout with the erase box', [R.last(), R.writes[0].eraseAll, /\. The board was erased first\./.test(R.said[R.states.lastIndexOf('done')])], ['done', true, true]);
   check('flow: after an erase install the box is unticked, the next one keeps settings', [R.unticked, R.erase], [1, false]);
   R = rig({ board: blank });
   R.inst.board(true); await R.inst.press(); await R.inst.press();
@@ -410,18 +462,20 @@ R.write_zip(sys.argv[1], ent)
   check('double connect: the button is off while connecting', R.btn(), ['Connect', false]);
   const c2 = R.inst.connect(); await c1; await c2;
   check('double connect: one link; the stale job opened nothing', [R.last(), R.closed], ['connected', []]);
-  // after DONE, Connect another board; the first board is unplugged while the chooser is open: nothing changes
+  // after DONE, Flash another board; the first board is unplugged while the chooser is open: nothing changes
   let pickB;
   const pA = { n: 'A' }, pB = { n: 'B' };
   R = rig({ choose: i => i === 0 ? Promise.resolve(pA) : new Promise(r => { pickB = r; }) });
   R.inst.board(true); await R.inst.press(); await R.inst.press();
   check('next board: the first one done', R.last(), 'done');
-  const next = R.inst.press();
+  R.inst.press();
+  check('next board: the form back first', [R.last(), R.btn()], ['usb', ['Connect', true]]);
+  const nextJob = R.inst.press();
   await tick();
   check('next board: the chooser open', R.last(), 'connecting');
   R.inst.lost(pA);
   check('next board: the first board unplugged changes nothing', R.last(), 'connecting');
-  pickB(pB); await next;
+  pickB(pB); await nextJob;
   check('next board: the picked port links', [R.last(), R.btn()], ['connected', ['Install', true]]);
   // install() outside CONNECTED leaves a running connect alone
   R = rig({ choose: () => new Promise(r => { pickB = r; }) });

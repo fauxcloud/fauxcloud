@@ -287,7 +287,9 @@ footer .brand .wm { height: 13px; width: 79px; } footer .brand .mk { width: 24px
 .side summary span { color: var(--ink-2); font-weight: 400; }
 @media (min-width: 900px) { .side { position: sticky; top: 88px; max-height: calc(100vh - 100px); overflow-y: auto; } .side summary { display: none; } }
 .side h4 { margin: 14px 10px 4px; font: 600 14px var(--num); color: var(--ink-2); }
-.side h4:first-of-type { margin-top: 4px; }
+.side nav > h4:first-child { margin-top: 4px; }
+.side nav > ul + ul { margin-top: 12px; }  /* a group without a label (named like its page) after another group */
+@media (max-width: 899px) { .side nav > h4.here:first-child { display: none; } }  /* it would repeat the sheet's summary */
 .side ul { list-style: none; margin: 0; padding: 0; }
 .side a { display: block; padding: 6px 10px; border-radius: 10px; text-decoration: none; color: var(--ink-2); }
 .side a:hover { background: color-mix(in srgb, var(--ink) 8%, transparent); color: var(--ink); }
@@ -425,7 +427,8 @@ dialog.zoom .zx { display: block; margin: 0 0 12px auto; min-height: 44px; paddi
 @media (prefers-reduced-transparency: reduce) { .glass { background: var(--solid); -webkit-backdrop-filter: none; backdrop-filter: none; }
   .shot .fd::after { display: none; } }
 
-/* the installer (/install/): one card, a big state word, the two selects, one button, the driver help, the log */
+/* the installer (/install/): one card, a big state word, the two selects, one button, the driver help, the log; after
+   a flash (.done) the QR, the state and the post-flash steps side by side, the form shrunk to its button */
 .prose .needs { display: flex; gap: 12px; align-items: flex-start; margin-top: 18px; color: var(--ink-2); font-size: 16px; }
 .needs svg { width: 24px; height: 24px; flex: none; margin-top: 1px; }
 .fl-gate { margin-top: 20px; padding: 16px 18px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--warn) 45%, transparent);
@@ -460,18 +463,32 @@ dialog.zoom .zx { display: block; margin: 0 0 12px auto; min-height: 44px; paddi
 .fl-ctl .fl-fine { margin: 0 0 8px 30px; }
 .fl-ctl .btn { justify-self: end; border: 0; cursor: pointer; font: 600 17px var(--sans); }
 .fl-ctl .btn:disabled { opacity: .45; cursor: not-allowed; }
-.fl-help { padding: 14px 20px; border-top: 1px solid var(--grid); font-size: 15px; color: var(--ink-2); }
+.fl-ctl .btn.quiet { background: none; }
+.fl-help { border-top: 1px solid var(--grid); font-size: 15px; color: var(--ink-2); }
 .fl-help.lit { background: color-mix(in srgb, var(--warn) 12%, transparent); }
+.prose .fl-help p { margin: 0; padding: 0 20px 14px; }
 .fl-log { border-top: 1px solid var(--grid); }
-.fl-log summary { cursor: pointer; padding: 12px 20px; font-weight: 600; font-size: 15px; }
+.fl-log summary, .fl-help summary { cursor: pointer; padding: 12px 20px; font-weight: 600; font-size: 15px; color: var(--ink); }
+.fl-logbar { display: flex; justify-content: flex-end; padding: 0 20px 8px; }
+.fl-logbar button { font: inherit; font-size: 13px; color: var(--ink); background: transparent; border: 1px solid var(--grid);
+  border-radius: var(--r-p); padding: 4px 12px; cursor: pointer; }
+html:not(.js) .fl-logbar { display: none; }
 .fl-log pre { margin: 0; padding: 0 20px 14px; max-height: 240px; overflow: auto; white-space: pre-wrap; font: 12.5px/1.5 var(--mono);
   color: var(--ink-2); }
-.fl-next { margin-top: 8px; }
+.fl-opts { display: contents; }
+.fl.done .fl-hero { grid-template-areas: "pic st" "pic aux" "pic next"; }
+.fl.done .fl-pic { align-self: start; }
+.fl-next { grid-area: next; }
+.prose .fl-next h2 { font-size: 21px; margin: 6px 0 0; }
+.prose .fl-next .steps { gap: 12px; margin-top: 12px; }
+.fl-next .ctas { margin-top: 16px; }
+.fl.done .fl-ctl { padding-top: 14px; padding-bottom: 14px; }
 @media (max-width: 520px) {
   .fl-hero { padding: 16px; gap: 4px 14px; }
   .fl-pic { min-height: 102px; } .fl-pic img { height: 102px; } .fl-mark svg { width: 64px; height: 64px; }
   .fl-qr svg { width: 128px; height: 128px; }
-  .fl-ctl, .fl-help { padding-left: 16px; padding-right: 16px; } .fl-log summary { padding-left: 16px; }
+  .fl.done .fl-hero { grid-template-areas: "pic st" "pic aux" "next next"; }
+  .fl-ctl, .prose .fl-help p, .fl-logbar { padding-left: 16px; padding-right: 16px; } .fl-log summary, .fl-help summary { padding-left: 16px; }
   .fl-ctl .btn { justify-self: stretch; justify-content: center; }
 }
 @media (prefers-reduced-motion: reduce) { .fl-st[data-tone="busy"] svg { animation: none; } .fl-bar i { transition: none; } }

@@ -19,35 +19,37 @@
           </div>
           <p class="fl-aux" id="fl-aux">Loading the list of boards…</p>
           <div class="fl-bar" id="fl-bar" hidden><i></i></div>
+          <div class="fl-next" id="fl-next" hidden>
+            <h2 id="next">Next: set it up</h2>
+            <ol class="steps">
+              <li><p>Unplug the board, wait 30 seconds, plug it in again. Its LED should now blink fast, four times a second. If it does not, do this once more. <a href="/docs/troubleshooting/#after-the-install-the-board-shows-no-wi-fi-or-does-not-join">No Wi-Fi?</a></p></li>
+              <li><p>On your phone, join the Wi-Fi <code id="fl-ssid">fauxcloud-setup-XXXX</code> with the password <code>fauxcloud</code>: <span id="fl-qr-say">scan the QR code on this page, or </span>pick the name in the phone's Wi-Fi list.</p>
+                <p class="fl-fine" id="fl-ssid-note" hidden>XXXX stands for four characters that differ on every board; the Wi-Fi list shows the full name.</p></li>
+              <li><p>Your phone may open the setup page by itself. If not, open <code>http://fauxcloud.setup</code> in its browser, with the <code>http://</code>.</p></li>
+              <li><p>On the setup page, answer the <a href="/docs/get-started/#set-up-fauxcloud">four steps</a> and press <b>Apply</b>.</p></li>
+              <li><p>Your phone should go back to your home Wi-Fi by itself; if not, join it. Then open <code>http://fauxcloud.local</code>.</p></li>
+            </ol>
+            <div class="ctas"><a class="btn primary" href="/docs/get-started/#pair-the-console">Go on with Get started</a></div>
+          </div>
         </div>
         <div class="fl-ctl">
-          <label for="fl-board">Board</label>
-          <select id="fl-board" disabled><option>Loading…</option></select>
-          <label for="fl-ver">Version</label>
-          <select id="fl-ver" disabled><option>Choose a board first</option></select>
-          <label class="fl-chk"><input type="checkbox" id="fl-erase"> <span>Erase everything, settings included: for a clean start only</span></label>
-          <p class="fl-fine">Unticked, the installer writes the four parts of fauxcloud and nothing else, so a board that already runs fauxcloud keeps its Wi-Fi, keys and learned values. It reads the board's flash layout first: if it differs from this version's, the installer stops and asks for this box.</p>
+          <div class="fl-opts" id="fl-opts">
+            <label for="fl-board">Board</label>
+            <select id="fl-board" disabled><option>Loading…</option></select>
+            <label for="fl-ver">Version</label>
+            <select id="fl-ver" disabled><option>Choose a board first</option></select>
+            <label class="fl-chk"><input type="checkbox" id="fl-erase"> <span>Erase everything, settings included: for a clean start only</span></label>
+            <p class="fl-fine">Unticked, the installer writes the four parts of fauxcloud and nothing else, so a board that already runs fauxcloud keeps its Wi-Fi, keys and learned values. It reads the board's flash layout first: if it differs from this version's, the installer stops and asks for this box.</p>
+          </div>
           <button class="btn primary" id="fl-go" type="button" disabled>Connect</button>
         </div>
-        <div class="fl-help" id="fl-help">
-          <b>Board not in the list?</b> Most boards carry a CP210x or a CH340 USB chip. Windows and macOS usually know the CP210x; the CH340 often needs its driver: <a href="https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers">CP210x (Silicon Labs)</a>, <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html">CH340 (WCH)</a>. Install it, unplug and replug the board, then press Connect again. A charge-only cable shows no port at all: use a USB data cable. <a href="/docs/flash/#if-the-board-is-not-seen">More about cables and drivers</a>
-        </div>
-        <details class="fl-log"><summary>Flashing log</summary><pre id="fl-log"></pre></details>
+        <details class="fl-help" id="fl-help"><summary>No USB port in the browser's list?</summary>
+          <p>Most boards carry a CP210x or a CH340 USB chip. Windows and macOS usually know the CP210x; the CH340 often needs its driver: <a href="https://www.silabs.com/software-and-tools/usb-to-uart-bridge-vcp-drivers">CP210x (Silicon Labs)</a>, <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html">CH340 (WCH)</a>. Install it, unplug and replug the board, then press Connect again. A charge-only cable shows no port at all: use a USB data cable. <a href="/docs/flash/#if-the-board-is-not-seen">More about cables and drivers</a></p>
+        </details>
+        <details class="fl-log"><summary>Flashing log</summary><div class="fl-logbar"><button type="button" id="fl-copy">Copy</button></div><pre id="fl-log"></pre></details>
       </section>
 
-      <div class="fl-next" id="fl-next" hidden>
-        <h2 id="next">Next: set it up</h2>
-        <ol class="steps">
-          <li><p>Unplug the board, wait 30 seconds and plug it in again, then go on with step 2. Some boards bring their Wi-Fi up only after this power cut. <a href="/docs/troubleshooting/#after-the-install-the-board-shows-no-wi-fi-or-does-not-join">No Wi-Fi?</a></p></li>
-          <li><p>Join the Wi-Fi <code id="fl-ssid">fauxcloud-setup-XXXX</code> with the password <code>fauxcloud</code>: scan the QR code above with your phone, or pick it from the list.</p>
-            <p class="fl-fine" id="fl-ssid-note" hidden>XXXX is the end of the board's own address; the Wi-Fi list shows the full name.</p></li>
-          <li><p>Open <code>http://fauxcloud.setup</code> in the phone's browser.</p></li>
-        </ol>
-        <div class="ctas"><a class="btn primary" href="/docs/get-started/#set-up-fauxcloud">Go on with Get started</a></div>
-      </div>
-
-      <p class="fl-fine">Free software under GPL-3.0-or-later, provided as is, without warranty of any kind; you flash and run it at your own risk. The installer runs in your browser with <a href="/install/third-party-notices.txt">esptool-js, pako and atob-lite</a> (Apache-2.0; MIT and Zlib; MIT) and sends nothing anywhere.</p>
-      <p class="fl-fine">fauxcloud is an independent project, not affiliated with or endorsed by Espressif or any weather station maker.</p>
+      <p class="fl-fine">The installer runs in your browser with <a href="/install/third-party-notices.txt">esptool-js, pako and atob-lite</a> (Apache-2.0; MIT and Zlib; MIT) and sends nothing anywhere.</p>
     </div></article>
   </div>
 </main>

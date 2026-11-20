@@ -45,8 +45,8 @@ in the [README]({{repo_url}}/blob/{{tag}}/README.md#get-started).
 Source: this repository at tag `{{tag}}`. Built with the Arduino-ESP32 core 3.3.12 (ESP-IDF v5.5.5 `b774170`,
 lib-builder `6671d0b`, toolchain xtensa-esp-elf 14.2.0_20260121) from `firmware/fauxcloud/sketch.yaml`;
 `tools/build.ps1` or the CI workflow rebuilds the same image. The core's source at that version:
-https://github.com/espressif/arduino-esp32/tree/3.3.12 (the project will also keep its own copy at that version and link
-it here once it exists).
+https://github.com/espressif/arduino-esp32/tree/3.3.12 (the project keeps a copy at
+https://github.com/fauxcloud/arduino-esp32/tree/3.3.12).
 
 fauxcloud is free software under GPL-3.0-or-later, with an additional permission for the Espressif SDK libraries that
 come in object form only (`COPYRIGHT.md`). Provided as is, without warranty of any kind; you flash and run it at your

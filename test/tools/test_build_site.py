@@ -193,6 +193,46 @@ class Site(unittest.TestCase):
         self.assertNotIn("</a><ul>", sub_list("troubleshooting"))
         self.assertNotIn("</a><ul>", sub_list("flash"))  # four h2s: the h3s stay in the page
 
+    def test_the_sidebar_never_repeats_a_word_on_top_of_itself(self):
+        """/docs/get-started/ on a phone showed "Get started" three times (the sheet's summary, the group label, the
+        row). The group is "Start"; a group named like one of its pages (Boards, Home Assistant) has no label; the
+        current page's label is marked, and the phone sheet hides it where it sits right under its summary."""
+        def side(p):
+            page = self.files[p].decode("utf-8")
+            start = page.index('<nav aria-label="Docs">')
+            return page[start:page.index("</details>", start)]
+        self.assertEqual(b.GROUPS[0], "Start")
+        self.assertEqual([g for s, _, g, *_ in b.DOCS if s in ("get-started", "flash")], ["Start", "Start"])
+        pages = [k for k in self.files if k.startswith("docs/") and k.endswith("index.html")]
+        self.assertGreater(len(pages), 10)
+        for p in pages:
+            nav = side(p)
+            for grp in ("Boards", "Home Assistant", "Get started"):
+                self.assertNotRegex(nav, r"<h4[^>]*>%s</h4>" % grp, p)
+            for grp in ("Start", "Use it", "Online, if you want it", "Help and reference", "Project", "Index"):
+                self.assertRegex(nav, r"<h4( class=\"here\")?>%s</h4>" % grp, p)
+            self.assertEqual(nav.count(">Get started</a>"), 1, p)
+            self.assertLessEqual(nav.count('class="here"'), 1, p)
+        for slug in ("get-started", "flash"):
+            page = self.files["docs/%s/index.html" % slug].decode("utf-8")
+            self.assertIn('<summary>Start <span>All pages</span></summary>', page)
+            self.assertTrue(side("docs/%s/index.html" % slug).startswith('<nav aria-label="Docs">\n        <h4 class="here">Start</h4>'))
+        nav = side("docs/dashboard/index.html")
+        self.assertIn('<h4>Start</h4>', nav)
+        self.assertIn('<h4 class="here">Use it</h4>', nav)
+        self.assertNotIn('class="here"', side("docs/all-pages/index.html"))
+        css = (pathlib.Path(__file__).resolve().parents[2] / "site" / "site.css").read_text("utf-8")
+        self.assertIn("@media (max-width: 899px) { .side nav > h4.here:first-child { display: none; } }", css)
+
+    def test_the_header_links_to_the_installer_on_every_page(self):
+        for p in ("index.html", "docs/get-started/index.html", "docs/all-pages/index.html", "install/index.html", "404.html"):
+            page = self.files[p].decode("utf-8")
+            bar = page[page.index('<header class="bar'):page.index("</header>")]
+            self.assertEqual(bar.count('href="/install/"'), 2, p)  # the bar and the phone menu
+        bar = self.files["install/index.html"].decode("utf-8")
+        self.assertIn('<a href="/install/" aria-current="page">Install</a>', bar)
+        self.assertNotIn('<a href="/install/" aria-current="page">', self.files["index.html"].decode("utf-8"))
+
     def test_docs_photos_carry_every_variant_and_their_size(self):
         page = self.files["docs/boards/index.html"].decode("utf-8")
         self.assertIn('<figure class="ph tall"><img src="/assets/board-300.jpg" srcset="/assets/board-300.jpg 300w, '

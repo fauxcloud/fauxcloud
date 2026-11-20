@@ -21,7 +21,8 @@ var STATES = {
   noboard: ['NO BOARD', 'i-usb', 'idle'],
   failed: ['FAILED', 'i-alert', 'bad']
 };
-// state -> {event: next state}; an event a state does not list leaves it as it is
+// state -> {event: next state}; an event a state does not list leaves it as it is (DONE: only the one button, which
+// brings the form back for the next board)
 var MOVES = {
   select: { board: 'usb' },
   usb: { board: 'usb', unboard: 'select', connect: 'connecting' },
@@ -30,10 +31,19 @@ var MOVES = {
   connecting: { cancel: 'noboard', linked: 'connected', fail: 'failed', lost: 'failed' },
   connected: { flash: 'flashing', board: 'usb', unboard: 'select', fail: 'failed', lost: 'failed' },
   flashing: { done: 'done', fail: 'failed', lost: 'failed' },
-  done: { board: 'usb', unboard: 'select', connect: 'connecting' }
+  done: { board: 'usb' }
 };
 function nextState(state, ev) { var m = MOVES[state]; return (m && m[ev]) || state; }
 function stateWord(state, pct) { return state === 'flashing' ? 'FLASHING ' + (pct | 0) + ' %' : STATES[state][0]; }
+// what the card shows in a state: the post-flash block ("Next: set it up") and the QR only after a flash (DONE), where
+// the form shrinks to its one button (Board, Version and the erase box come back when it is pressed) and the button
+// turns quiet beside the block's own; the bar only while flashing; the driver help (folded) lit and opened after NO BOARD
+// and FAILED, unless the failure is not the board's (opts.noHelp: the version list did not load)
+function view(state, opts) {
+  var done = state === 'done';
+  return { next: done, qr: done && !!(opts && opts.qr), opts: !done, quiet: done, bar: state === 'flashing',
+    help: (state === 'noboard' || state === 'failed') && !(opts && opts.noHelp) };
+}
 
 // the whole write as one percentage: part i is `written` of `total` (its own unit, compressed bytes), each part weighs
 // its size; 100 only when the last part is through
@@ -394,9 +404,10 @@ function msgOf(e) { return String((e && e.message) || e); }
 // ---------------------------------------------------------------- the sequences: connect, install, a lost port
 // env: requestPort(), loadLib() (the bundle), fetch(url), version() (the chosen versions.json row), erase() (the box),
 // terminal (the library's log), ui: show(state, aux html, opts), aux(html), progress(pct, text), button(label, on),
-// lock('idle' | 'linked' | 'busy'), log(text), untick() (the erase box, after every install). Each job holds an epoch; when the port goes away, the board changes or
-// Connect is pressed again the epoch moves on, and the old job, once it wakes, leaves the page and the new link alone
-// and closes only its own transport.
+// lock('idle' | 'linked' | 'busy'), log(text), untick() (the erase box, after every install). Each job holds an epoch;
+// when the port goes away, the board changes or Connect is pressed again the epoch moves on, and the old job, once it
+// wakes, leaves the page and the new link alone and closes only its own transport. After DONE the one button ("Flash
+// another board") brings the form back for the next board (CONNECT USB); it does not open the port chooser.
 var BAUD = 460800;
 var SETUP_PASS = 'fauxcloud';
 var NOT_YET = 'No version of fauxcloud can be installed from here yet: the first release brings it. Until then, ' +
@@ -531,9 +542,9 @@ function makeInstaller(env) {
       if (my !== epoch) { await close(l); return; }
       var ssid = setupSsid(l.mac);
       go('done', 'fauxcloud ' + esc(v.version) + ' is on the board' +
-        (erase ? ', on a freshly erased flash.' : '; its settings, if it had any, are kept.') + note,
+        (erase ? '. The board was erased first.' : '. Any settings it had were kept.') + note,
         { ssid: ssid, qr: ssid ? qrSvg(qrEncode(wifiQrText(ssid, SETUP_PASS)), 'QR code: join the Wi-Fi ' + ssid) : '' });
-      ui.button('Connect another board', true);
+      ui.button('Flash another board', true);
     } catch (e) {
       if (my !== epoch) { await close(l); return; }
       ui.log('install error: ' + msgOf(e));
@@ -560,7 +571,7 @@ function makeInstaller(env) {
 
   return {
     board: board, version: version, connect: connect, install: install, lost: lost,
-    press: function () { return st === 'connected' ? install() : connect(); },
+    press: function () { if (st === 'done') return board(true); return st === 'connected' ? install() : connect(); },
     state: function () { return st; }
   };
 }
@@ -580,22 +591,27 @@ function boot() {
   var ui = {
     log: log,
     show: function (state, aux, opts) {
-      var s = STATES[state];
+      var s = STATES[state], v = view(state, opts);
       if (state !== 'flashing') pct = state === 'done' ? 100 : 0;
       $('fl-word').textContent = stateWord(state, pct);
       $('fl-state').dataset.tone = s[2];
       $('fl-icon').setAttribute('href', '#' + s[1]);
       $('fl-aux').innerHTML = aux;
-      $('fl-bar').hidden = state !== 'flashing';
+      $('fl-bar').hidden = !v.bar;
       $('fl-bar').firstChild.style.width = pct + '%';
-      var qr = state === 'done' && opts.qr;
-      $('fl-qr').hidden = !qr;
-      if (qr) $('fl-qr').innerHTML = opts.qr;
-      $('fl-photo').hidden = !!qr || !boardSel.value;
-      $('fl-mark').hidden = !!qr || !!boardSel.value;
+      $('fl-qr').hidden = !v.qr;
+      $('fl-qr-say').hidden = !v.qr;  // "scan the QR code on this page, or" only beside a QR
+      if (v.qr) $('fl-qr').innerHTML = opts.qr;
+      $('fl-photo').hidden = v.qr || !boardSel.value;
+      $('fl-mark').hidden = v.qr || !!boardSel.value;
       if (state === 'done') { $('fl-ssid').textContent = opts.ssid || 'fauxcloud-setup-XXXX'; $('fl-ssid-note').hidden = !!opts.ssid; }
-      $('fl-next').hidden = state !== 'done';
-      $('fl-help').classList.toggle('lit', state === 'noboard' || state === 'failed');
+      $('fl-next').hidden = !v.next;
+      card.classList.toggle('done', v.next);
+      $('fl-opts').hidden = !v.opts;
+      go.classList.toggle('primary', !v.quiet);
+      go.classList.toggle('quiet', v.quiet);
+      $('fl-help').classList.toggle('lit', v.help);
+      if (v.help) $('fl-help').open = true;  // opened for NO BOARD and FAILED, never folded by the page
     },
     aux: function (html) { $('fl-aux').innerHTML = html; },
     progress: function (p, text) {
@@ -635,6 +651,12 @@ function boot() {
     inst.board(!!b);
   };
   verSel.onchange = inst.version;
+  // the log's Copy button: the whole log as text (for a bug report); says so for a moment, as the docs' code blocks do
+  var copy = $('fl-copy');
+  copy.onclick = function () {
+    if (navigator.clipboard) navigator.clipboard.writeText(logEl.textContent).then(function () {
+      copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy'; }, 1500); }, function () {});
+  };
   go.onclick = inst.press;
   navigator.serial.addEventListener('disconnect', function (e) { inst.lost(e.target); });
 
@@ -651,7 +673,7 @@ function boot() {
     ui.show('select', 'Pick your board to begin.', {});
   }).catch(function (e) {
     log('versions.json: ' + msgOf(e));
-    ui.show('failed', 'The list of versions did not load. Reload the page, or <a href="/docs/flash/#by-hand-with-esptool">flash it by hand</a>.', {});
+    ui.show('failed', 'The list of versions did not load. Reload the page, or <a href="/docs/flash/#by-hand-with-esptool">flash it by hand</a>.', { noHelp: true });
   });
 }
 
