@@ -44,7 +44,7 @@ jobs:
           persist-credentials: false
       # the arduino-cli binary is pinned too (the action alone installs the newest 1.x): the same version as the
       # local build (firmware/README.md "Toolchain"); bump both together
-      - uses: arduino/setup-arduino-cli@b3cda96fddef6af6c56b4c5efb5c47e2357935db  # v2.0.0 (the v2 branch)
+      - uses: arduino/setup-arduino-cli@b3cda96fddef6af6c56b4c5efb5c47e2357935db  # v2.1.0 (the v2 branch)
         with:
           version: "1.5.1"
       # set only when release.yml passes it: an empty SOURCE_DATE_EPOCH is a compiler error, so a push run leaves it unset
