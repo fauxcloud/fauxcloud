@@ -11,7 +11,7 @@ Two halves, one output folder:
          /try/data/ (the fixtures the shim reads, copied as they are: index.json, history/, learn/, static/, admin/).
   2. The site's own pages, from the templates in site/templates/ and the public Markdown (docs/*.md, SECURITY.md,
      CONTRIBUTING.md, CHANGELOG.md), at clean URLs: / (the landing), /docs/ (all pages), /docs/<slug>/, /install/,
-     /404.html; one stylesheet (site/tokens.css + site/site.css), one script (site/site.js), the images of
+     /404.html, /sitemap.xml (every page meant for search, lastmod from git); one stylesheet (site/tokens.css + site/site.css), one script (site/site.js), the images of
      site/assets/ and the favicon of the dashboard. /install/ alone also gets site/install/install.js and, through it,
      the vendored /assets/esptool-bundle.js (site/SOURCES.md); /firmware/ is site/firmware/ (versions.json, the list
      the installer reads, and any release zips tools/site_versions.py --mirror copied there); /robots.txt and
@@ -19,7 +19,8 @@ Two halves, one output folder:
      generated from the dashboard's app.css (its dash-face token blocks) and committed; a drift is a failing --check.
 The check compares the emitted shells and assets with page() and with the committed header (web_assets.h), so a demo
 that drifts from the firmware's pages is a failing build; it also runs the site checks: every internal link and
-anchor resolves, every page carries the share card, no internal or private words, the budgets of site/README.md.
+anchor resolves, every page carries the share card and its search tags (the sitemap lists exactly the pages meant for
+search), no internal or private words, the budgets of site/README.md.
 
 Usage (stdlib only, run isolated; needs the generator's node + terser + zopfli, see firmware/README.md):
     python -I tools/build_site.py            # build site/_build/ (and refresh site/tokens.css)
@@ -39,6 +40,7 @@ import json
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 import tempfile
 
@@ -111,6 +113,22 @@ DOCS = [
     ("plans", "docs/plans.md", "Project", None, None),
     ("changelog", "CHANGELOG.md", "Project", "Changelog", "What changed in each release."),
 ]
+# the search-result text of a page whose lede is too long or too vague for one (<= 160 characters, a searcher's words;
+# vendor names only to describe what works); every other docs page uses its lede
+DESCRIPTIONS = {
+    "home-assistant": "Get a Wi-Fi weather station such as the Vevor 7-in-1 into Home Assistant locally, with no cloud: MQTT "
+                      "discovery makes a device with wind, rain and pressure.",
+    "online-services": "Send your readings to Windy, Weather Underground and other weather services (up to three) and show "
+                       "Weather Underground's forecast. Off until you turn them on.",
+    "airport-weather": "Show the official report (METAR) and forecast (TAF) of up to three nearby airports beside your own "
+                       "readings, and see when your console's pressure looks off.",
+    "compatibility": "Which Wi-Fi weather stations work with fauxcloud. Verified on one Vevor 7-in-1 (YT60234); a console "
+                     "whose setup page has a Weather Underground box may work.",
+    "security": "How to report a security problem in fauxcloud, and what is in scope.",
+    "changelog": "What changed in each fauxcloud release, newest first.",
+}
+# search limits the site checks hold every page to (longer ones are cut in a result)
+TITLE_MAX, DESC_MAX = 60, 160
 # the docs' own URLs that are not a page of the table: the root opens Get started (a copy, its canonical URL names the
 # page), the site map has its own address
 DOCS_ROOT, ALL_PAGES = "get-started", "/docs/all-pages/"
@@ -166,8 +184,21 @@ def og_tags(path, title, description):
 
 TRY_TITLE = "fauxcloud demo: the dashboard on demo data"
 TRY_DESC = "Click through the fauxcloud dashboard and settings page in your browser, on demo data. No board needed."
-# the second block the build adds to each shell, right before </head>
-TRY_OG = {dest: og_tags("/" + dest.replace("index.html", ""), TRY_TITLE, TRY_DESC).encode("utf-8") for dest in SHELLS.values()}
+# the demo's page for search; its settings page is reached from it and kept out of results (noindex)
+TRY_INDEXED = {"try/index.html"}
+
+
+def try_block(dest):
+    """The second block the build adds to a shell, right before </head>: the search tags (description, canonical or
+    noindex) and the share card. The shells are the firmware's bytes, so the build adds what a search needs here."""
+    path = "/" + dest.replace("index.html", "")
+    seo = '<meta name="description" content="%s">\n' % html.escape(TRY_DESC, quote=True)
+    seo += ('<link rel="canonical" href="%s%s">\n' % (SITE_URL, path) if dest in TRY_INDEXED
+            else '<meta name="robots" content="noindex">\n')
+    return (seo + og_tags(path, TRY_TITLE, TRY_DESC)).encode("utf-8")
+
+
+TRY_OG = {dest: try_block(dest) for dest in SHELLS.values()}
 
 
 def with_tag(shell, og=b""):
@@ -428,16 +459,25 @@ def text_of(html_):
     return html.unescape(re.sub(r"<[^>]+>", " ", html_))
 
 
-def shell_page(path, title, description, main, css, js, sprite):
+def shell_page(path, title, description, main, css, js, sprite, index=True, extra=""):
+    """A page of the site. `index`: the page is for search (its canonical URL) or not (noindex); `extra`: more head tags."""
+    head = ('<link rel="canonical" href="%s%s">' % (SITE_URL, path) if index else '<meta name="robots" content="noindex">')
     return fill(template("base.html"), {
-        "title": html.escape(title), "description": html.escape(description, quote=True), "url": SITE_URL + path,
+        "title": html.escape(title), "description": html.escape(description, quote=True), "head": head + extra,
         "og": og_tags(path, title, description).rstrip("\n"), "css": css, "js": js, "sprite": sprite.rstrip("\n"),
         "nav": nav(path), "main": main})
 
 
 LANDING_TITLE = "fauxcloud: " + TAGLINE
-LANDING_DESC = ("Free, open-source firmware for an ESP32 board that your Wi-Fi weather station uploads to instead of the "
-                "cloud: a dashboard on your network and Home Assistant entities. No app, no account.")
+# the query words people use: an ESP32, Weather Underground, a Wi-Fi weather station by name, local, Home Assistant
+LANDING_DESC = ("Free ESP32 firmware that stands in for Weather Underground: your Wi-Fi weather station, e.g. a Vevor "
+                "7-in-1, uploads to it. Local dashboard and Home Assistant.")
+# what the landing is, for search engines and AI answers (schema.org); no version, so it never goes stale
+LANDING_LD = json.dumps({
+    "@context": "https://schema.org", "@type": "SoftwareApplication", "name": "fauxcloud", "url": SITE_URL + "/",
+    "description": LANDING_DESC, "applicationCategory": "HomeApplication", "operatingSystem": "ESP32",
+    "license": "https://spdx.org/licenses/GPL-3.0-or-later.html", "sameAs": REPO_URL,
+    "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"}}, separators=(",", ":")).replace("</", "<\\/")
 
 
 def site_files():
@@ -454,8 +494,9 @@ def site_files():
     inst_path = "/assets/install-%s.js" % hashlib.sha1(inst_b).hexdigest()[:8]
     files[inst_path[1:]] = inst_b
     sprite = template("sprite.svg")
-    page = lambda path, title, desc, main: shell_page(path, title, desc, main, css_path, js_path, sprite).encode("utf-8")  # noqa: E731
-    files["index.html"] = page("/", LANDING_TITLE, LANDING_DESC, fill(template("landing.html"), {}))
+    page = lambda path, title, desc, main, **kw: shell_page(path, title, desc, main, css_path, js_path, sprite, **kw).encode("utf-8")  # noqa: E731
+    files["index.html"] = page("/", LANDING_TITLE, LANDING_DESC, fill(template("landing.html"), {}),
+                               extra='\n<script type="application/ld+json">%s</script>' % LANDING_LD)
     files["install/index.html"] = page("/install/", "Install fauxcloud", "Install fauxcloud on an ESP32 board from "
                                        "Chrome or Edge on a computer, over USB: pick the board and the version, "
                                        "connect, install.", fill(template("install.html"), {"install-js": inst_path}))
@@ -469,21 +510,56 @@ def site_files():
             files["firmware/" + f.relative_to(FIRMWARE).as_posix()] = f.read_bytes()
     docs = Docs()
     files[ALL_PAGES[1:] + "index.html"] = page(ALL_PAGES, "All pages · fauxcloud docs",
-                                               "Every page of the fauxcloud documentation.", docs.index())
+                                               "Every page of the fauxcloud documentation and its sections, in one list.",
+                                               docs.index())
     for p in docs.pages:
-        desc = strip_md(p["lede"]) or text_of(p["body"]).strip()[:160]
+        desc = DESCRIPTIONS.get(p["slug"]) or strip_md(p["lede"]) or text_of(p["body"]).strip()[:DESC_MAX]
         files["docs/%s/index.html" % p["slug"]] = page(p["url"], "%s · fauxcloud docs" % p["title"], " ".join(desc.split()),
                                                        docs.page(p))
     files["docs/index.html"] = files["docs/%s/index.html" % DOCS_ROOT]
     files["404.html"] = page("/404.html", "Page not found · fauxcloud", "This address does not lead to a page.",
-                             template("notfound.html"))
+                             template("notfound.html"), index=False)
     files["favicon.svg"] = (g.WEB / "favicon.svg").read_bytes()
     for f in sorted(ASSETS.iterdir()):
         if f.is_file():
             files["assets/" + f.name] = f.read_bytes()
     if SOCIAL not in files:
         raise SystemExit("build_site: missing site/%s (the share card)" % SOCIAL)
+    files[SITEMAP] = sitemap()
     return files
+
+
+SITEMAP = "sitemap.xml"
+
+
+def sitemap_rows():
+    """[(URL path, [the repo files its content comes from])]: every page meant for search, in reading order."""
+    rows = [("/", [TEMPLATES / "landing.html"]), ("/install/", [TEMPLATES / "install.html", INSTALL_JS])]
+    rows += [("/docs/%s/" % slug, [ROOT / src]) for slug, src, *_ in DOCS]
+    rows += [(ALL_PAGES, [ROOT / src for _, src, *_ in DOCS]), ("/try/", [g.WEB / "index.html", TRY_SRC / "demo.js"])]
+    return rows
+
+
+def git_date(paths):
+    """The newest commit date (YYYY-MM-DD) among `paths`, or None (no git, never committed). A shallow checkout gives
+    its one commit's date, so the site workflow checks out the full history."""
+    rels = [pathlib.Path(p).resolve().relative_to(ROOT).as_posix() for p in paths]
+    try:
+        r = subprocess.run(["git", "log", "-1", "--format=%cs", "--"] + rels, cwd=ROOT, capture_output=True, text=True,
+                           timeout=60)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    out = r.stdout.strip()
+    return out if r.returncode == 0 and re.match(r"^\d{4}-\d{2}-\d{2}$", out) else None
+
+
+def sitemap():
+    """/sitemap.xml (sitemaps.org 0.9): absolute URLs, lastmod from git (the build date when git has none), no priorities."""
+    today = datetime.datetime.now(datetime.timezone.utc).date().isoformat()
+    rows = ["<url><loc>%s%s</loc><lastmod>%s</lastmod></url>" % (SITE_URL, path, git_date(srcs) or today)
+            for path, srcs in sitemap_rows()]
+    return ('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+            '%s\n</urlset>\n' % "\n".join(rows)).encode("utf-8")
 
 
 def local_firmware(files, build_dir):
@@ -644,6 +720,62 @@ def page_checks(files):
     return errors
 
 
+def own_url(p):
+    """The URL path a build path is served at (a folder's index.html at the folder)."""
+    return "/" + (p[:-len("index.html")] if p.endswith("index.html") else p)
+
+
+def head_tags(page):
+    """(titles, descriptions, canonical URLs, noindex?) of one page's head, unescaped."""
+    head = page[:page.find("</head>")]
+    un = html.unescape
+    return ([un(t) for t in re.findall(r"<title[^>]*>(.*?)</title>", head, re.S)],
+            [un(d) for d in re.findall(r'<meta name="description" content="([^"]*)">', head)],
+            [un(c) for c in re.findall(r'<link rel="canonical" href="([^"]*)">', head)],
+            bool(re.search(r'<meta name="robots" content="[^"]*noindex', head)))
+
+
+def indexed_pages(files):
+    """{URL path: build path} of the pages meant for search: their canonical URL is their own, no noindex."""
+    out = {}
+    for p in sorted(site_pages(files)) + sorted(SHELLS.values()):
+        _, _, canon, noindex = head_tags(files[p].decode("utf-8"))
+        if not noindex and canon == [SITE_URL + own_url(p)]:
+            out[own_url(p)] = p
+    return out
+
+
+def seo_checks(files):
+    """What a search engine reads: one title (<= 60) and one description (<= 160) per page, unique among the pages
+    meant for search; a canonical URL that is served, or noindex (never both); the sitemap = the pages meant for search."""
+    errors, seen = [], {}
+    pages = {**site_pages(files), **{k: files[k].decode("utf-8") for k in SHELLS.values()}}
+    indexed = indexed_pages(files)
+    for p, d in sorted(pages.items()):
+        titles, descs, canon, noindex = head_tags(d)
+        if len(titles) != 1 or not titles[0].strip() or len(titles[0]) > TITLE_MAX:
+            errors.append("%s: needs one title of at most %d characters (%s)" % (p, TITLE_MAX, titles))
+        if len(descs) != 1 or not descs[0].strip() or len(descs[0]) > DESC_MAX:
+            errors.append("%s: needs one description of at most %d characters (%s)" % (
+                p, DESC_MAX, [len(x) for x in descs]))
+        if len(canon) + noindex != 1:
+            errors.append("%s: needs a canonical URL or noindex, exactly one of them" % p)
+        for c in canon:
+            if not c.startswith(SITE_URL + "/") or resolve(files, c[len(SITE_URL):]) is None:
+                errors.append("%s: the canonical URL %s is not a page of the site" % (p, c))
+        if own_url(p) in indexed:
+            for kind, vals in (("title", titles), ("description", descs)):
+                for v in vals:
+                    if (kind, v) in seen:
+                        errors.append("%s: the same %s as %s" % (p, kind, seen[(kind, v)]))
+                    seen.setdefault((kind, v), p)
+    listed = re.findall(r"<loc>%s([^<]*)</loc><lastmod>\d{4}-\d{2}-\d{2}</lastmod>" % re.escape(SITE_URL),
+                        files.get(SITEMAP, b"").decode("utf-8"))
+    if len(listed) != len(set(listed)) or set(listed) != set(indexed):
+        errors.append("sitemap.xml: lists %s, the pages meant for search are %s" % (sorted(listed), sorted(indexed)))
+    return errors
+
+
 SECURITY_FIELDS = {"Acknowledgments", "Canonical", "Contact", "CSAF", "Encryption", "Expires", "Hiring", "Policy",
                    "Preferred-Languages"}
 
@@ -695,6 +827,8 @@ def robots_checks(text):
         errors.append("robots.txt: no 'User-agent: *' group")
     if re.search(r"^Disallow:\s*/\s*$", text, re.M):
         errors.append("robots.txt: 'Disallow: /' shuts the whole site")
+    if not re.search(r"^Sitemap: %s/%s\s*$" % (re.escape(SITE_URL), SITEMAP), text, re.M):
+        errors.append("robots.txt: no 'Sitemap: %s/%s' line" % (SITE_URL, SITEMAP))
     return errors
 
 
@@ -861,6 +995,7 @@ def check(out, local=None, extra=None, served=None):
         errors.append("site/tokens.css differs from app.css's tokens (run python -I tools/build_site.py and commit it)")
     errors += link_check(files)[0]
     errors += page_checks(files)
+    errors += seo_checks(files)
     errors += installer_checks(files)
     errors += security_txt_checks(files[".well-known/security.txt"].decode("utf-8"),
                                   datetime.datetime.now(datetime.timezone.utc))
@@ -908,7 +1043,7 @@ def main(argv):
             print("build_site: %d finding(s):\n  %s" % (len(errors), "\n  ".join(errors)))
             return 1
         print("build_site: /try/ shells and assets are the shipped bytes (two added blocks per shell); tokens in step "
-              "with app.css; links, share cards, words and budgets clean")
+              "with app.css; links, share cards, search tags, sitemap, words and budgets clean")
         return 0
     t = tokens()
     if not TOKENS.is_file() or TOKENS.read_text(encoding="utf-8").replace("\r\n", "\n") != t:
@@ -921,7 +1056,7 @@ def main(argv):
     for name, (n, cap) in budgets(files).items():
         print("  %-34s %7d B of %d" % (name, n, cap))
     errs, external = link_check(files)
-    found = errs + page_checks(files) + installer_checks(files)
+    found = errs + page_checks(files) + seo_checks(files) + installer_checks(files)
     # the site workflow builds before the release zips join (they pass the leak gate unpacked, in the release): one
     # note for them here; --check with --firmware-extra and --served checks them in full
     aside = [e for e in found if re.search(r"^versions\.json .*: /firmware/[^ ]+ is not built$", e)]

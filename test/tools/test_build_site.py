@@ -394,9 +394,90 @@ class Site(unittest.TestCase):
             self.assertTrue(any(word in e for e in errors), (word, errors))
 
     def test_the_robots_check_refuses_a_closed_site(self):
-        self.assertEqual(b.robots_checks("User-agent: *\nAllow: /\n"), [])
-        self.assertTrue(b.robots_checks("User-agent: *\nDisallow: /\n"))
-        self.assertTrue(b.robots_checks("User-agent: GPTBot\nAllow: /\n"))
+        line = "\nSitemap: https://fauxcloud.org/sitemap.xml\n"
+        self.assertEqual(b.robots_checks("User-agent: *\nAllow: /\n" + line), [])
+        self.assertTrue(b.robots_checks("User-agent: *\nDisallow: /\n" + line))
+        self.assertTrue(b.robots_checks("User-agent: GPTBot\nAllow: /\n" + line))
+        self.assertTrue(b.robots_checks("User-agent: *\nAllow: /\n"), "no Sitemap line")
+
+    def test_the_sitemap_lists_every_page_meant_for_search_and_nothing_else(self):
+        # independent of the build's own table: every HTML page whose canonical URL is its own and that is not noindex
+        import re
+        want = set()
+        for p, d in self.files.items():
+            if not p.endswith(".html") or p.startswith("a/"):
+                continue
+            head = d.decode("utf-8").split("</head>")[0]
+            url = "/" + p[:-len("index.html")] if p.endswith("index.html") else "/" + p
+            if 'name="robots" content="noindex"' not in head and ('<link rel="canonical" href="%s%s">' % (b.SITE_URL, url)) in head:
+                want.add(b.SITE_URL + url)
+        sm = self.files[b.SITEMAP].decode("utf-8")
+        self.assertTrue(sm.startswith('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'))
+        locs = re.findall(r"<url><loc>([^<]+)</loc><lastmod>(\d{4}-\d{2}-\d{2})</lastmod></url>", sm)
+        self.assertEqual(len(locs), sm.count("<url>"), "every row has a loc and a lastmod")
+        self.assertEqual(len(locs), len({u for u, _ in locs}), "no URL twice")
+        self.assertEqual({u for u, _ in locs}, want)
+        # the pages the search should find, and the ones it should not
+        for url in ("/", "/install/", "/docs/get-started/", "/docs/home-assistant/", "/docs/all-pages/", "/try/"):
+            self.assertIn(b.SITE_URL + url, want)
+        for url in ("/docs/", "/404.html", "/try/admin.html"):
+            self.assertNotIn(b.SITE_URL + url, want)
+        self.assertNotIn("priority", sm)
+        self.assertEqual(b.seo_checks(self.files), [])
+
+    def test_the_sitemap_lastmod_comes_from_git(self):
+        self.assertRegex(b.git_date([b.ROOT / "docs" / "get-started.md"]) or "", r"^\d{4}-\d{2}-\d{2}$")
+        self.assertIsNone(b.git_date([b.ROOT / "docs" / "no-such-page.md"]))  # never committed: the build date is used
+
+    def test_the_search_tags_of_each_page(self):
+        for p, d in {**b.site_pages(self.files), **{k: self.files[k].decode("utf-8") for k in b.SHELLS.values()}}.items():
+            titles, descs, canon, noindex = b.head_tags(d)
+            self.assertEqual(len(titles), 1, p)
+            self.assertLessEqual(len(titles[0]), b.TITLE_MAX, p)
+            self.assertEqual(len(descs), 1, p)
+            self.assertLessEqual(len(descs[0]), b.DESC_MAX, p)
+            self.assertEqual(len(canon) + noindex, 1, p)
+        # the docs root is a copy of Get started: its canonical URL names the page
+        self.assertEqual(b.head_tags(self.files["docs/index.html"].decode("utf-8"))[2], [b.SITE_URL + "/docs/get-started/"])
+        self.assertTrue(b.head_tags(self.files["404.html"].decode("utf-8"))[3])
+        self.assertTrue(b.head_tags(self.files["try/admin.html"].decode("utf-8"))[3])
+        self.assertEqual(b.head_tags(self.files["try/index.html"].decode("utf-8"))[2], [b.SITE_URL + "/try/"])
+
+    def test_the_landing_describes_itself_for_search(self):
+        import json
+        import re
+        page = self.files["index.html"].decode("utf-8")
+        blocks = re.findall(r'<script type="application/ld\+json">(.*?)</script>', page, re.S)
+        self.assertEqual(len(blocks), 1)
+        ld = json.loads(blocks[0])
+        self.assertEqual((ld["@type"], ld["name"], ld["url"], ld["operatingSystem"]),
+                         ("SoftwareApplication", "fauxcloud", b.SITE_URL + "/", "ESP32"))
+        self.assertIn("GPL-3.0-or-later", ld["license"])
+        self.assertEqual(ld["offers"]["price"], "0")
+        self.assertNotIn("softwareVersion", ld)  # a version here would go stale at the next release
+        self.assertEqual(sum(d.count("application/ld+json") for d in b.site_pages(self.files).values()), 1, "landing only")
+
+    def test_the_search_checks_name_each_fault(self):
+        page = self.files["docs/boards/index.html"].decode("utf-8")
+        title = b.head_tags(page)[0][0]
+        desc = b.head_tags(page)[1][0]
+        cases = [
+            (page.replace("<title>%s</title>" % title, "<title>%s</title>" % ("x" * 61)), "title of at most"),
+            (page.replace('content="%s">' % desc, 'content="%s">' % ("y" * 161), 1), "description of at most"),
+            (page.replace('<link rel="canonical" href="%s/docs/boards/">' % b.SITE_URL, ""), "canonical URL or noindex"),
+            (page.replace('<link rel="canonical" href="%s/docs/boards/">' % b.SITE_URL,
+                          '<link rel="canonical" href="%s/docs/nope/">' % b.SITE_URL), "not a page of the site"),
+            (self.files["docs/flash/index.html"].decode("utf-8").replace(
+                '"%s/docs/flash/"' % b.SITE_URL, '"%s/docs/boards/"' % b.SITE_URL), "the same title"),
+        ]
+        for bad, word in cases:
+            files = dict(self.files)
+            files["docs/boards/index.html"] = bad.encode("utf-8")
+            errors = b.seo_checks(files)
+            self.assertTrue(any(word in e for e in errors), (word, errors))
+        files = dict(self.files)
+        files[b.SITEMAP] = self.files[b.SITEMAP].replace(b"<url><loc>%s/try/</loc>" % b.SITE_URL.encode(), b"<url><loc>x</loc>")
+        self.assertTrue(any("sitemap.xml" in e for e in b.seo_checks(files)))
 
     def test_private_sources_are_refused(self):
         for rel in (b.PRIVATE[0] + "/plan.md", b.PRIVATE[1] + "/x.md", b.PRIVATE[2] + "/a.txt", "firmware/fauxcloud/secrets.h"):
