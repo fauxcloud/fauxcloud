@@ -84,9 +84,9 @@ class LazyMap(unittest.TestCase):
         self.assertFalse(any("ok.js" in x for x in g.over_budget(self.built + [ok])))
 
     def test_the_flash_cap_is_enforced(self):
-        self.assertEqual(g.WEB_FLASH_MAX, 230736)  # 149 307 code + 52 000 assets + 29 429 language packs (each with its 64 B hash-noise margin)
+        self.assertEqual(g.WEB_FLASH_MAX, 236860)  # 154 228 code + 52 000 assets + 30 632 language packs (each with its 64 B hash-noise margin)
         # the split: each part within its own figure
-        self.assertEqual((g.WEB_CODE_MAX, g.WEB_ASSET_MAX, g.WEB_LANG_MAX), (149307, 52000, 29429))
+        self.assertEqual((g.WEB_CODE_MAX, g.WEB_ASSET_MAX, g.WEB_LANG_MAX), (154228, 52000, 30632))
         code, assets, packs = g.flash_split(self.built)
         self.assertEqual(code + assets + packs, g.flash_total(self.built))
         self.assertLessEqual(code, g.WEB_CODE_MAX)

@@ -50,6 +50,7 @@ While you hold it, the board's LED (blue on the DevKit we verified) blinks once 
 | Dark | No power, or the board is held in reset or has hung. |
 | A short flash every 6 seconds | All good. |
 | Fast blinking, 4 times a second | Setup mode: join `fauxcloud-setup-XXXX`. Also while a firmware update is written. |
+| Steady light | Listening to a new console (Settings, fauxcloud Wi-Fi for your station). Press Stop on that sheet to end it. |
 | One short blink a second | Not connected to your home Wi-Fi. The console's Wi-Fi still works. Also in the first seconds after a start. |
 | Three short blips, then a pause | Something needs a look: the MQTT broker (the server that passes messages to Home Assistant) is not reachable, the sign-in is locked after wrong passwords, or memory is low. |
 | One blink a second while you hold BOOT | Counting the seconds you hold it. |

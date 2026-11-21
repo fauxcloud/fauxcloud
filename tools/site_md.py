@@ -32,6 +32,7 @@ SEE = "**You should see**"
 BUTTON = re.compile(r"^\[\*\*([^*\]]+)\*\*\]\(([^)\s]+)\)$")
 # the labels of a troubleshooting entry: a <dl> with the label in its own column (on GitHub, a bold run)
 LABEL = re.compile(r"^\*\*(Cause\.|Fix\.|fauxcloud shows this as)\*\*(?:\s+(.*))?$")
+PHROW = '<div class="phrow">'  # photos in a row, in their order (site.css)
 # a paragraph that is one image: a photo of the site (the build's figure hook maps the path to its variants); a title in
 # quotes becomes its caption (on GitHub, the image's tooltip)
 IMAGE = re.compile(r"^!\[([^\]]+)\]\(([^)\s]+)(?:\s+\"([^\"]+)\")?\)$")
@@ -140,6 +141,7 @@ class Doc:
 
     def blocks(self, lines, offset, top=False):
         out, i, n = [], 0, len(lines)
+        last_fig = -1  # the index in out of the last photo (or row of photos)
         while i < n:
             line = lines[i]
             s = line.strip()
@@ -208,7 +210,16 @@ class Doc:
             if im and not top:
                 self.fail(offset + i, "a photo only at the page's top level, not inside a list item or a callout")
             if im and self.figure and (i + 1 >= n or not lines[i + 1].strip()):
-                out.append(self.figure(html.unescape(im.group(1)), im.group(2), self.inline(im.group(3)) if im.group(3) else ""))
+                fig = self.figure(html.unescape(im.group(1)), im.group(2), self.inline(im.group(3)) if im.group(3) else "")
+                if out and last_fig == len(out) - 1:  # photos one after another: one row, in their order (a float
+                    prev = out[-1]                    # each would line them up right to left)
+                    if prev.startswith(PHROW):
+                        out[-1] = prev[:-len("</div>")] + fig + "</div>"
+                    else:
+                        out[-1] = PHROW + prev + fig + "</div>"
+                else:
+                    out.append(fig)
+                last_fig = len(out) - 1
                 i += 1
                 continue
             if s.startswith("![") or re.match(r"^<[A-Za-z!/]", s):

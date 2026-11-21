@@ -21,7 +21,7 @@ enum NqSrc : uint8_t { NQ_SRC_FWD, NQ_SRC_METAR, NQ_SRC_WUFC };
 constexpr int NQ_MAX = 2 * FWD_SLOTS + 5;  // a send and a test per target; METAR fetch, run once, lookup; WU pull, Fetch now
 constexpr long NQ_SEND_SOON_S = 15;
 // NqPick.why beyond fwd_sched.h's codes: a fetch held for a send window that opens soon
-enum : uint16_t { FW_WHY_SEND_SOON = 0x1000 };
+enum : uint16_t { FW_WHY_SEND_SOON = 0x1000 };  // between FW_WHY_NETOUT and FW_WHY_TURN (fwd_sched.h)
 
 struct NqCand {
   uint8_t src, slot;

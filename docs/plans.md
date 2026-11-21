@@ -33,7 +33,7 @@ These need internet through your home Wi-Fi; each is off until you turn it on:
 - **Station export and import.** Today you can save one station's settings to a file and load them again. Next comes one file with the history, the learned values and the settings, so a board can be rebuilt from it, for example before reinstalling.
 - **More languages.** A translator's guide, so anyone can add a language to the dashboard and Settings.
 - **Firmware files per language.** When there are more languages than fit in one firmware file, the release offers a choice.
-- **More consoles.** Each [console report](station-profiles.md#report-a-new-console-model) can become a profile on the Compatibility page. A model is listed as working only after someone has run it.
+- **More consoles.** Each [console report](report-a-console.md) can become a profile on the Compatibility page. A model is listed as working only after someone has run it.
 
 ## Wanted later
 

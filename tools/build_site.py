@@ -107,6 +107,7 @@ DOCS = [
     ("compatibility", "docs/station-profiles.md", "Help and reference", "Compatibility",
      "If your console's setup page has a Weather Underground box, it may work (not tested yet; a console report tells "
      "us). If it pairs only through an app, it will not."),
+    ("report-a-console", "docs/report-a-console.md", "Help and reference", None, None),
     ("security", "SECURITY.md", "Project", "Security", "How to report a vulnerability, and what is in scope."),
     ("contributing", "CONTRIBUTING.md", "Project", "Contributing",
      "How to help: console reports, bug reports and code, and the checks a change passes."),

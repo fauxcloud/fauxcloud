@@ -91,6 +91,7 @@ void loop() {
   static uint32_t lastSec = 0, lastBeat = 0;
   const uint32_t ms = millis();
   if (gMode == Mode::Run) {
+    captureTick();  // listening to a new console: its start / stop order runs ahead of mqttLoop (which follows its flags)
     mqttLoop();
     ingestQueued();
     if (ms - lastSec >= 1000) {

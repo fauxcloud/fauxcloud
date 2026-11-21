@@ -104,6 +104,7 @@ int httpCloseIdlePages(int keep_fd) {
 
 static esp_err_t onUpload(httpd_req_t* req);
 static esp_err_t dispatchInner(httpd_req_t* req);
+static void captureHttp(httpd_req_t* req, httpd_err_code_t err, bool from_err);
 static bool sideAndHostOk(httpd_req_t* req);
 static esp_err_t dispatch(httpd_req_t* req) {
   gInFlight++;
@@ -114,6 +115,7 @@ static esp_err_t dispatch(httpd_req_t* req) {
 }
 static esp_err_t dispatchInner(httpd_req_t* req) {
   reqBegin();
+  captureHttp(req, HTTPD_404_NOT_FOUND, false);  // listening to a new console: the request as it arrived (AP side)
   const Handler h = (Handler)req->user_ctx;
   const int fd = httpd_req_to_sockfd(req);
   // a request whose local and peer addresses name different sides gets no page and no admin call; nor does one from
@@ -458,6 +460,46 @@ esp_err_t onOther(httpd_req_t* req, httpd_err_code_t err) {
   return ESP_OK;
 }
 
+// ---------------------------------------------------------------- listening to a new console (src/capture.h)
+// Every request on the AP side while the mode is on becomes 1-5 records: the line with the whole query, the headers of
+// the fixed list (the httpd looks headers up by name only), the head of a body read by one receive (one 3-s timeout,
+// no drain; a chunked body is not read) and whether the console had already closed before the reply. Redacted before
+// it is stored (capture.cpp). The answers that follow do not change.
+static void captureHttp(httpd_req_t* req, httpd_err_code_t err, bool from_err) {
+  if (!capWants(gMode == Mode::Run, srcIf(req) == SrcIf::Ap, captureOn())) return;
+  CapHttpScratch* s = captureScratchTake();  // the mode's own block (gone: the mode just stopped)
+  if (!s) return;
+  CapHttpIn in = {};
+  in.over_limits = from_err && (err == HTTPD_414_URI_TOO_LONG || err == HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE);
+  in.headers_over = err == HTTPD_431_REQ_HDR_FIELDS_TOO_LARGE;
+  char(&hv)[CAPTURE_HDR_N][64] = s->hv;
+  uint8_t* head = s->head;
+  bool probe = false;
+  if (!in.over_limits) {
+    in.method = http_method_str((enum http_method)req->method);
+    in.uri = req->uri;
+    for (int i = 0; i < CAPTURE_HDR_N; i++) {
+      const esp_err_t e = httpd_req_get_hdr_value_str(req, CAPTURE_HDRS[i].name, hv[i], sizeof hv[i]);
+      if (e == ESP_OK || e == ESP_ERR_HTTPD_RESULT_TRUNC) in.hdr[i] = hv[i];
+    }
+    const char* te = in.hdr[7];  // Transfer-Encoding
+    in.chunked = te && (strstr(te, "chunked") || strstr(te, "Chunked"));
+    if (!in.chunked && req->content_len > 0) {
+      in.content_len = req->content_len;
+      const size_t want = req->content_len < sizeof s->head ? req->content_len : sizeof s->head;
+      const int got = httpd_req_recv(req, (char*)head, want);  // one receive: the head that is there
+      if (got > 0) in.body = head, in.body_len = (size_t)got;
+      else in.body_timeout = true;
+    }
+    char c;  // the console's FIN already here: it will not read the answer
+    in.closed_before_reply = recv(httpd_req_to_sockfd(req), &c, 1, MSG_PEEK | MSG_DONTWAIT) == 0;
+    probe = req->method == HTTP_GET && findProbe(req) != nullptr;
+  }
+  capHttpUnit(in, &s->u);
+  captureRecord(s->u, peerIp(req), !probe);
+  captureScratchGive((uint32_t)uxTaskGetStackHighWaterMark(nullptr));
+}
+
 // A signed-out admin call from the home network with the CSRF header -> 401 JSON, so the page
 // shows its sign-in instead of a parse error. The body (a PUT or an OTA image) is never read; the session closes.
 void replyUnauth(httpd_req_t* req) {
@@ -482,6 +524,7 @@ void replyUnauth(httpd_req_t* req) {
 
 static esp_err_t onOtherErr(httpd_req_t* req, httpd_err_code_t err) {
   reqBegin();
+  captureHttp(req, err, true);  // unregistered paths, other methods and the probes only arrive here
   const esp_err_t r = onOther(req, err);
   reqEnd(req, r != ESP_OK);
   return r;
@@ -550,6 +593,11 @@ static esp_err_t onUpload(httpd_req_t* req) {
   // processed (no history, no MQTT): the heap stays in one piece for the write; a good OTA restarts anyway.
   if (otaActive()) {
     otaCountSkipped();
+    return ESP_OK;
+  }
+  // Listening to a new console: answered, recorded (captureHttp), never stored and no station created
+  if (captureQuiet()) {
+    captureCountSkipped();
     return ESP_OK;
   }
 
@@ -683,7 +731,7 @@ static esp_err_t onLive(httpd_req_t* req) {
     OutNear near;  // in the ETag (a METAR fetch between uploads refreshes the body) and the outlook
     if (st) outlookNearInput(st->last_seen, &near);
     if (st) liveEtag(gEtag, gBootId, *st, millis(), ap, timeSynced(),
-                     outlookEtagIn(*st, gBridge.lat, gBridge.lon, outlookTimeOk(), &near) ^ wufcEtagWord());
+                     outlookEtagIn(*st, gBridge.lat, gBridge.lon, outlookTimeOk(), &near) ^ wufcEtagWord() ^ (captureQuiet() ? 0x5a5a0001u : 0u));
     xSemaphoreGive(gLock);
     if (!st) return noStation(req);
     if (notModified(req, "no-store")) return ESP_OK;
@@ -695,7 +743,7 @@ static esp_err_t onLive(httpd_req_t* req) {
       snapOutlook(*st, &gSnap, gBridge.lat, gBridge.lon, outlookTimeOk(), &near);
       gSnap.wufc_on = !ap && wufcSnap(&gSnap.wufc);  // LAN face only: AP pages never see it
       liveEtag(gEtag, gBootId, *st, millis(), ap, timeSynced(),
-               outlookEtagIn(*st, gBridge.lat, gBridge.lon, outlookTimeOk(), &near) ^ wufcEtagWord());
+               outlookEtagIn(*st, gBridge.lat, gBridge.lon, outlookTimeOk(), &near) ^ wufcEtagWord() ^ (captureQuiet() ? 0x5a5a0001u : 0u));
     }
     xSemaphoreGive(gLock);
     if (!st) return noStation(req);
@@ -1137,7 +1185,7 @@ void httpStart() {
   cfg.close_fn = onSockClose;  // forgets the socket's page mark, then closes it
   cfg.open_fn = onSockOpen;    // marks the accept for the heap minimum's context
   // every module's routes (run mode); FWD_TLS adds its own
-  cfg.max_uri_handlers = 59 + (FWD_TLS ? 7 : 0);  // FWD_TLS: /api/metar, four /api/admin/metar*, /api/admin/wufc and /wufc/run
+  cfg.max_uri_handlers = 62 + (FWD_TLS ? 7 : 0);  // FWD_TLS: /api/metar, four /api/admin/metar*, /api/admin/wufc and /wufc/run
   cfg.send_wait_timeout = 2;    // a stalled browser must not hold the only worker for long
   // 2 s: a partial write makes IDF's httpd_send_all wait twice (6.8 s measured at 3 s), so a
   // client that stops reading holds the worker <= ~4.5 s.

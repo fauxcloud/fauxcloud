@@ -36,3 +36,8 @@ admin-station.js: Generic WU  # a profile's product name
 admin-station.js: /^(humidity|sunc|parse|bounds|measurement|moisture|precipitation|illuminance|irradiance|voltage|general|filters|generic|pscale|ptype|pconv|ftype|maxst)$/  # field keys, HA classes, rule codes, tab ids, element ids
 adminface.js:  checked  # an HTML attribute
 adminface.js: /^(security|maint|no challenge|sensor|change|aprev)$/  # sheet keys, an internal error code, the slug fallback key, an event name, an element id
+admin-capture.js: fauxcloud {} listen {} {} clock:{} ntp:{}/{} ap:192.168.77.0/24 clients:{}  # the report's header: a machine-readable text for the Console report form, English and ASCII
+admin-capture.js: /^\s*body:\s*$/  # the report's body line prefix (machine-readable, English)
+admin-capture.js:  entries not kept  # the report's gap line (machine-readable, English)
+admin-capture.js: /^(synced|joined before)$/  # report words (machine-readable, English)
+admin-capture.js: caprev  # a field id

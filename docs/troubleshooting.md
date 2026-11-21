@@ -189,4 +189,4 @@ More in [Home Assistant](home-assistant.md).
 - **Rain gauge see-saw.** The magnet can fall out, or the see-saw can be fitted backwards, so no rain is counted. The reported fix is to glue the magnet in place and check the see-saw's direction.
 - **Wind bearings near the sea.** The anemometer and vane bearings are reported to corrode after about two years in sea air.
 
-For a console that is not on the list, see [Compatibility](station-profiles.md) and send a console report.
+For a console that is not on the list, see [Compatibility](station-profiles.md) and [Report a console](report-a-console.md).

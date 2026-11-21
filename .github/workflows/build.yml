@@ -279,6 +279,8 @@ jobs:
         run: node test/tools/fwd_vectors.js
       - name: METAR sheet vectors
         run: node test/tools/metar_vectors.js
+      - name: Listen to a new console sheet vectors (admin-capture.js -- the history, the chain, the report)
+        run: node test/tools/capture_vectors.js
       - name: tz.json columns round trip in the picker
         run: node test/tools/tz_vectors.js
       - name: Airport view vectors (dash-airport.js)

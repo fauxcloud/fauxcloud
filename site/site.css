@@ -387,6 +387,9 @@ html:not(.js) .code button { display: none; }
 .docs .prose figure.ph.tall { width: 200px; }
 .docs .prose figure.ph img { display: block; width: 100%; height: auto; border-radius: 14px; border: 1px solid var(--grid); }
 @media (min-width: 600px) { .docs .prose figure.ph { float: right; margin: 6px 0 16px 24px; } }
+/* photos one after another (site_md.py's row): side by side in their order, never floated */
+.docs .prose .phrow { display: flex; flex-wrap: wrap; gap: 16px; clear: both; margin: 18px 0 0; }
+.docs .prose .phrow figure.ph { float: none; margin: 0; }
 .docs .prose h2, .docs .prose h3 { clear: both; }
 /* a framed block beside a photo (code, a callout) fits in the space the photo leaves: as its own block formatting
    context its frame, its Copy button and its scrollbar stay beside the photo instead of running under it; the page's

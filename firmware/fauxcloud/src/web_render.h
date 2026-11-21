@@ -90,6 +90,7 @@ struct Diag {
   // heap_low = minimum free heap over the last HEAP_LOW_MINUTES below HEAP_LOW_FREE8, heap_min_10m = the 10-minute
   // minimum (every heap_* figure is the byte-addressable heap, MALLOC_CAP_8BIT); HTTP load counters
   bool heap_low;
+  bool capture;  // listening to a new console (the admin's status row says so)
   uint32_t heap_min_10m;
   // the last OTA write's heap (RTC record)
   HeapDip heap_dip;  // the since-boot 8-bit minimum's second: uptime, context mask, open httpd sockets

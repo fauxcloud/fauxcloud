@@ -26,10 +26,11 @@ enum FwdBusy : uint16_t {
   FB_MQTT = 1u << 5,     // HA discovery / retraction pending, or the publish stall
   FB_RESTART = 1u << 6,  // a planned reboot, a factory reset, an OTA, setup mode
   FB_LINK = 1u << 7,     // no home Wi-Fi, or no real time
+  FB_CAPTURE = 1u << 8,  // the bridge listens to a new console: nothing goes online
 };
-constexpr uint16_t FB_ALL = 0xFF;
-constexpr uint16_t FB_TEST = FB_UPLOAD | FB_RESTART | FB_LINK;  // "Send one now" obeys only these (+ the heap floor)
-const char* fwdBusyName(uint16_t mask);  // the first set bit: upload http store learn hour mqtt restart link
+constexpr uint16_t FB_ALL = 0x1FF;
+constexpr uint16_t FB_TEST = FB_UPLOAD | FB_RESTART | FB_LINK | FB_CAPTURE;  // "Send one now" obeys only these (+ the heap floor)
+const char* fwdBusyName(uint16_t mask);  // the first set bit: upload http store learn hour mqtt restart link capture
 // FB_HTTP (one place for the rule, forwarding and METAR alike): a request in flight, the last page request
 // less than FWD_QUIET_MS ago (0 = none yet), or http_shed rose less than FWD_SHED_MS ago (0 = never)
 bool fwdHttpBusy(uint32_t now_ms, int in_flight, uint32_t last_page_ms, uint32_t shed_ms);
@@ -62,8 +63,8 @@ constexpr uint32_t FWD_TEST_WAIT_MS = 20000;                // "Send one now" wa
 constexpr uint8_t FWD_PAUSE_AFTER = 3;                      // refused keys in a row
 
 bool fwdResourcesOk(bool tls, FwdTlsClass cls, uint32_t free8, uint32_t largest8);
-// Why a running send must stop now (nullptr = go on): heap / largest / ota / reboot / deadline.
-const char* fwdAbortWhy(uint32_t free8, uint32_t largest8, bool ota, bool reboot, uint32_t elapsed_ms);
+// Why a running send must stop now (nullptr = go on): ota / reboot / capture / heap / largest / deadline.
+const char* fwdAbortWhy(uint32_t free8, uint32_t largest8, bool ota, bool reboot, uint32_t elapsed_ms, bool capture = false);
 
 // A TLS connection's end (tlsc) as a send result: untrusted -> TlsUntrusted (not retried), too_large -> Reject
 // (not retried, why too_large), no_memory -> NoMemory (the pause after three), the rest -> Fail (retried).
@@ -109,7 +110,7 @@ struct FwdCounters {
 };
 
 // Why the last tick in a window did not start the target: a busy bit (FwdBusy), or one of these
-enum : uint16_t { FW_WHY_HEAP = 0x100, FW_WHY_DATA = 0x200, FW_WHY_NETOUT = 0x400, FW_WHY_TURN = 0x800 };
+enum : uint16_t { FW_WHY_HEAP = 0x200, FW_WHY_DATA = 0x400, FW_WHY_NETOUT = 0x800, FW_WHY_TURN = 0x2000 };  // above the busy bits
 
 struct FwdSlotIn {
   bool on;            // master switch, target enabled and configured

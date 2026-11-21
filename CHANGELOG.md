@@ -7,6 +7,13 @@ release notes, so every release needs its own `## [<version>]` section before it
 
 ## [Unreleased]
 
+### Added
+- **Listen to a new console** (Settings, fauxcloud Wi-Fi for your station): for a console that does not upload to fauxcloud, the bridge
+  listens on its own Wi-Fi and makes a report of what the console sends (the names it looks up, the devices that
+  join, the requests with their IDs and keys hidden, what it tries on HTTPS and other ports), ready to paste into a
+  Console report on GitHub. While it listens, Home Assistant shows fauxcloud as unavailable, online services pause
+  and readings are not saved; it runs until you press Stop, or stops by itself when its sheet stays closed for an hour.
+
 ## [1.0.0] - 2026-11-20
 
 The first stable release of fauxcloud. The firmware is the same as 1.0.0-rc.1 apart from its version string, so

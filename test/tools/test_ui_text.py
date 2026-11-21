@@ -252,6 +252,32 @@ NEW = {
     "web/dash-airport.js#3": ["base_unk: 'base unknown'", "oc_unk: '{c}, base unknown'"],
     # (3) the chart legend's band (a user read "Lowest to highest" as a sort order)
     "web/dash-sheet.js#2": ["lg_range: 'Range'"],
+    # "Listen to a new console": its sheet (one template per message and per case), the fauxcloud Wi-Fi sheet's button, the home
+    # line and the update sheet's refusal while it runs
+    "web/admin-capture.js": [
+        "title: 'Listen to a new console'",
+        "For a console that never uploads: fauxcloud listens to everything it sends and makes a report you can paste into a Console report on GitHub.",
+        "c_ha: 'fauxcloud’s sensors show as unavailable in Home Assistant.'", "c_fwd: 'Online services pause.'",
+        "c_metar: 'Airport weather pauses.'", "c_save: 'Readings are not saved.'",
+        "c_time: 'It runs until you press Stop. If this sheet stays closed for an hour, it stops by itself.'",
+        "c_open: 'Keep this page open; lines that arrive while it cannot reach fauxcloud may be lost.'",
+        "notime: 'fauxcloud has no time yet. A console usually sends nothing until it gets the time.'",
+        "ap: 'Start listening, then connect the console to this Wi-Fi:'",
+        "ap_name: 'fauxcloud Wi-Fi name', ap_pw: 'fauxcloud Wi-Fi password'",
+        "start: 'Start listening'", "starting: 'Starting…'", "on: 'Listening for {dur}'", "stop: 'Stop'",
+        "done: 'Stopped after {dur}.'", "idle: 'Stopped: this sheet was closed for an hour.'", "restarted: 'Stopped by a restart.'",
+        "again: 'Listen again'", "dl: 'Download'", "report: 'Report'",
+        "ap_sum: 'fauxcloud Wi-Fi: {ap}'", "dev_n: { one: '1 device on the fauxcloud Wi-Fi', other: '{n} devices on the fauxcloud Wi-Fi' }",
+        "nojoin: 'No device has joined the fauxcloud Wi-Fi yet.'",
+        "cl_on: '{ip} · {maker} · joined {t} after the start'", "cl_off: '{ip} · {maker} · joined {t}, left {t2} after the start'",
+        "cl_pre: '{ip} · {maker} · there before the start'", "cl_rnd: 'random address'", "cl_noip: 'no address yet'",
+        "empty: 'Nothing received yet.'", "gap: { one: '… 1 entry not kept', other: '… {n} entries not kept' }",
+        "hint: 'fauxcloud hides the values it recognises as IDs, keys and passwords, and all but the maker’s part of each device’s MAC address. Read the report before you share it.'",
+        "e_ota: 'An update is in progress. Try again after it.'", "e_restart: 'A restart is planned. Try again after it.'",
+        "e_heap: 'Not enough free memory right now. Try again in a minute.'"],
+    "web/adminface.js#6": ["cap_line: 'Listening to a new console: Home Assistant and online services are paused.'", "cap_open: 'Open'",
+                           "cap_h: 'Console not showing up?', cap_why: 'fauxcloud listens to what it sends and makes a report you can paste on GitHub.', cap_btn: 'Listen to a new console'"],
+    "web/admin-sheets.js#2": ["x_capture: 'Stop listening to the console first.'"],
 }
 
 # retired phrases: (label, regex) -- none may appear in web/ or src/

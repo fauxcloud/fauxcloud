@@ -62,7 +62,7 @@ rain event compared with an official station, solar readings in full sun and gus
 **not been seen on the verified console yet**.
 
 Have a different console? A short [console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml)
-is the way a model gets onto the list.
+is the way a model gets onto the list; [Report a console](docs/report-a-console.md) shows how fauxcloud listens to it.
 
 ## What you need
 
@@ -256,8 +256,8 @@ More: the HTTP routes, MQTT topics and fields are in [docs/api.md](docs/api.md).
 ## Report a problem
 
 Use the [bug report form](https://github.com/fauxcloud/fauxcloud/issues/new?template=bug_report.yml); it asks for the
-diagnostics block from your board. For a console that is not on the list, use the
-[console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml). Never post a
+diagnostics block from your board. For a console that is not on the list, see [Report a console](docs/report-a-console.md)
+and the [console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml) form. Never post a
 password, a key or the crash file (it contains your passwords).
 
 Contributions are welcome within the rules in [CONTRIBUTING.md](CONTRIBUTING.md); how decisions are made is in

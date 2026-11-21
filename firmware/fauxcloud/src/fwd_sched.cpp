@@ -7,9 +7,9 @@
 
 namespace fc {
 
-static const char* const BUSY_NAMES[] = {"upload", "http", "store", "learn", "hour", "mqtt", "restart", "link"};
+static const char* const BUSY_NAMES[] = {"upload", "http", "store", "learn", "hour", "mqtt", "restart", "link", "capture"};
 const char* fwdBusyName(uint16_t m) {
-  for (int i = 0; i < 8; i++)
+  for (int i = 0; i < 9; i++)
     if ((m >> i) & 1u) return BUSY_NAMES[i];
   if (m & FW_WHY_HEAP) return "heap";
   if (m & FW_WHY_DATA) return "data";
@@ -39,9 +39,10 @@ bool fwdResourcesOk(bool tls, FwdTlsClass cls, uint32_t free8, uint32_t largest8
   return free8 >= FWD_TLS_P8[c] + FWD_TLS_MARGIN8 && largest8 >= FWD_TLS_LARGEST_MIN;
 }
 
-const char* fwdAbortWhy(uint32_t free8, uint32_t largest8, bool ota, bool reboot, uint32_t elapsed_ms) {
+const char* fwdAbortWhy(uint32_t free8, uint32_t largest8, bool ota, bool reboot, uint32_t elapsed_ms, bool capture) {
   if (ota) return "ota";
   if (reboot) return "reboot";
+  if (capture) return "capture";
   if (free8 < FWD_ABORT_FREE_MIN) return "heap";
   if (largest8 < FWD_ABORT_LARGEST_MIN) return "largest";
   if (elapsed_ms >= FWD_SEND_MAX_MS) return "deadline";

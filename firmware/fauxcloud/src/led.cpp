@@ -7,6 +7,7 @@ LedState ledState(const LedInputs& in) {
   if (in.reset_commit) return LedState::ResetCommit;
   if (in.button_held) return in.held_ms >= LED_HELD_STROBE_MS ? LedState::ResetCommit : LedState::ButtonHeld;
   if (in.setup_mode || in.ota) return LedState::Setup;
+  if (in.capture) return LedState::Listening;
   if (in.uptime_ms < LED_SETTLE_MS) return LedState::Booting;
   if (!in.sta_up) return LedState::Connecting;
   if (in.attention) return LedState::Attention;
@@ -25,6 +26,7 @@ bool ledOn(LedState s, uint32_t now_ms, bool sta_up, uint32_t held_ms) {
     }
     case LedState::Connecting: return now_ms % 1000 < 100;
     case LedState::Ok: return now_ms % 6000 < 500;
+    case LedState::Listening: return true;
   }
   return false;
 }

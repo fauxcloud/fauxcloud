@@ -154,6 +154,7 @@ void heapSample() {
     mon = heap_caps_monitor_local_minimum_free_size_start() == ESP_OK;
   }
   const HeapNow hn = heapNow();
+  captureHeapFeed(low8, hn.largest8);  // the capture window's minima take the same local minimum (none slips between samples)
   const FwdHeapFeed hf = fwdHeapFeed(fwdRun, fwdRan, low8, hn.free8, fwdPre);
 #if FC_DIAG_BENCH
   if (hf.to_fwd) fwdNoteHeapLow(low8);  // fwd_heap_min on the byte-addressable heap, like the send's own samples
@@ -176,6 +177,7 @@ void heapSample() {
   if (storeBusy()) ctx |= HC_STORE;
   if (learnBusy()) ctx |= HC_LEARN;
   if (otaActive()) ctx |= HC_OTA;
+  if (captureQuiet()) ctx |= HC_CAPTURE;
   if (up != prevUp) ctx |= HC_UPLOAD;
   prevReq = reqs, prevPub = pub, prevUp = up;
   if (gDip.lower(low8)) {  // read outside gMetMux: only loop() writes gDip
@@ -214,7 +216,7 @@ void heapSample() {
     fragInit = true;
     if (strcmp(lastReset(), "heap_frag") == 0) frag.quiet(FragWatch::FRAG_QUIET_MS);
   }
-  if (frag.feed(ms, largest8, gUploads.load(), otaActive())) {
+  if (frag.feed(ms, largest8, gUploads.load(), otaActive() || captureQuiet())) {  // a capture is a quiet spell
     logf("HEAP", "largest block < %lu B for %lu s with no upload: planned restart (heap_frag)",
          (unsigned long)FragWatch::FRAG_LARGEST_MIN, (unsigned long)(FragWatch::FRAG_HOLD_MS / 1000));
     sysCountFragRestart();
@@ -1043,9 +1045,10 @@ void coreLoop() {
     in.button_held = held;
     in.setup_mode = gMode == Mode::Setup;
     in.sta_up = staUp();
-    in.attention = (gSettings.mqtt_host[0] && !mqttUp()) || lockActive || heapLow(nullptr);
+    in.attention = (gSettings.mqtt_host[0] && !mqttUp() && !captureQuiet()) || lockActive || heapLow(nullptr);
     in.uptime_ms = ms;
     in.ota = otaActive();
+    in.capture = captureQuiet();
     in.held_ms = heldMs;
     const int8_t want = ledOn(ledState(in), ms, in.sta_up, heldMs) ? 1 : 0;
     if (want != ledPrev) {  // write on edges only

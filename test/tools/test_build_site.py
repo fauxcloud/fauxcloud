@@ -567,6 +567,12 @@ class Markdown(unittest.TestCase):
         self.assertIn("<FIG A & b|../x-600.jpg|>", out)
         _, out, _, _ = site_md.render('![a](../x-600.jpg "The *view* now")' + lf, "t.md", lambda t: t, None, hook)
         self.assertIn("<FIG a|../x-600.jpg|The <em>view</em> now>", out)
+        # photos one after another: one row, in their order; a photo alone stays a figure of its own
+        _, out, _, _ = site_md.render("![a](../x-600.jpg)" + lf + lf + "![b](../y-600.jpg)" + lf + lf + "![c](../z-600.jpg)" + lf + lf
+                                      + "Text." + lf + lf + "![d](../w-600.jpg)" + lf, "t.md", lambda t: t, None, hook)
+        self.assertIn('<div class="phrow"><FIG a|../x-600.jpg|><FIG b|../y-600.jpg|><FIG c|../z-600.jpg|></div>', out)
+        self.assertEqual(out.count('class="phrow"'), 1)
+        self.assertIn("<FIG d|../w-600.jpg|>", out)
         for bad in ("A ![a](b.jpg) inside a line." + lf, "![a](b.jpg)" + lf + "text on the next line" + lf):
             with self.assertRaises(SystemExit):
                 site_md.render(bad, "t.md", lambda t: t, None, hook)

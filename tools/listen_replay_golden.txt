@@ -1,0 +1,19 @@
+# tools/listen_replay_golden.txt -- the report lines tools/listen_replay.py --compare expects after a full run
+# ({c} = the laptop's last address byte on the bridge's Wi-Fi, * = anything). The header's time, version and
+# durations, the laptop's own DNS lookups and probes, and the order of items inside a line are not checked.
+CLIENTS: *.{c} vendor:* joined *
+DNS: *console.example.net x*
+HTTP: .{c} GET /weatherstation/updateweatherstation.php?ID=***&PASSWORD=***&dateutc=now&tempf=51.2&humidity=60&dewptf=38.0&baromin=29.92&rainin=0.00&dailyrainin=0.12&winddir=180&windspeedmph=3.0&windgustmph=5.0&UV=1&solarRadiation=12.5 host=rtupdate.wunderground.com ua=listen_replay conn=close x1 (first *)
+HTTP: .{c} GET /weatherstation/updateweatherstation.php?ID=***&PASSWORD=***&* host=rtupdate.wunderground.com ua=listen_replay conn=close closed-before-reply x1 (first *)
+HTTP: .{c} POST /api/v1/up host=rtupdate.wunderground.com ua=listen_replay ct=application/json cl=19 conn=close x1 (first *)
+  body: json 19B: {"token":***,"t":1}
+HTTP: .{c} POST /weatherstation/updateweatherstation.php host=rtupdate.wunderground.com ua=listen_replay ct=application/x-www-form-urlencoded cl=15 conn=close x1 (first *)
+  body: form 15B: ID=***&temp=1
+HTTP: .{c} GET /generate_204 host=connectivitycheck.gstatic.com ua=listen_replay conn=close x1 (first *)
+TCP: *.{c} :443 x*
+TLS: *.{c} :443 verdict=ecdhe-ecdsa-gcm v=1.3,1.2 sni=api.example.net suites=*
+MQTT: *.{c} :1883 MQTT 3.1.1 flags=user,pass,clean keepalive=60 clientid=12B x1*
+HTTP: .{c} :8080 POST /data/report/?PASSKEY=***&tempf=51.2 host=* x1 (first *)
+  body: form 48B: PASSKEY=***&tempf=51.2&name=Z??rich
+TCP: *.{c} :8080 no data x1*
+RAW: *.{c} :5000 20B: 80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f x1*

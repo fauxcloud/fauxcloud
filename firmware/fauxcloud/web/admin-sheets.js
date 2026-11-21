@@ -44,6 +44,7 @@ const WY = FC.w('admin-sheets', {
   x_uploading: 'Uploading… {pct} %', x_installed: 'Installed {v}. Restarting… this page reconnects by itself.',
   x_unexpected: 'unexpected answer', x_not_inst: 'Not installed: {e}. The running version stays.', x_failed: 'failed',
   x_broke: 'The upload broke off. The running version stays; try again.', x_busy: 'An update is already running. Wait for it to finish.',
+  x_capture: 'Stop listening to the console first.',
   x_nomem: 'Not enough free memory for an update. Restart fauxcloud and try again.', x_cd_gone: 'The crash data was already cleared.',
   x_cd_retry: 'Not downloaded. Try again.', x_cd_done: 'Downloaded. The crash data on fauxcloud is cleared.',
   x_rebooting: 'Restarting… sign in again in a few seconds.',
@@ -150,12 +151,13 @@ SHEETS.maint = function () {
         x.upload.onprogress = e => { if (e.lengthComputable) { bar.value = e.loaded / e.total * 100; msg.textContent = FC.t(WY.x_uploading, { pct: Math.round(bar.value) }); } };
         x.onload = () => { if (x.status === 401) { signedOut(); return; } let j; try { j = JSON.parse(x.responseText); } catch (e) { j = { error: WY.x_unexpected }; }
           if (j.ok) { msg.textContent = FC.t(WY.x_installed, { v: j.version }); setTimeout(() => location.reload(), 15000); }
-          else { msg.textContent = FC.t(WY.x_not_inst, { e: j.error || WY.x_failed }); b.disabled = $('#otaFile').disabled = false; bar.hidden = true; } };
+          else { msg.textContent = j.error === 'capture' ? WY.x_capture : FC.t(WY.x_not_inst, { e: j.error || WY.x_failed }); b.disabled = $('#otaFile').disabled = false; bar.hidden = true; } };
         // a refusal closes the connection before the browser can read why: ask the bridge what happened
         x.onerror = () => { const early = bar.value < 25; b.disabled = $('#otaFile').disabled = false; bar.hidden = true;
           msg.textContent = WY.x_broke;
           FC.get('/api/bridge/status', { etag: false, front: true }).then(r => {
             if (r.data.ota) msg.textContent = WY.x_busy;
+            else if (API.status.capture) msg.textContent = WY.x_capture;  // listening to a new console
             else if (early) msg.textContent = WY.x_nomem;
           }, () => {}); };
         x.send(f); return; }
