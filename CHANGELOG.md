@@ -7,12 +7,25 @@ release notes, so every release needs its own `## [<version>]` section before it
 
 ## [Unreleased]
 
+## [1.1.0-rc.1] - 2026-11-21
+
+The first release candidate of fauxcloud 1.1. It adds a way to check a console that fauxcloud does not know yet:
+fauxcloud listens to what the console sends and turns it into a report for GitHub. Everything else works as in 1.0.0.
+It was verified on one console: a Vevor 7-in-1, model YT60234, firmware 1.0.1, EU 868 MHz; see
+[docs/station-profiles.md](docs/station-profiles.md) for what was and was not checked.
+
 ### Added
 - **Listen to a new console** (Settings, fauxcloud Wi-Fi for your station): for a console that does not upload to fauxcloud, the bridge
   listens on its own Wi-Fi and makes a report of what the console sends (the names it looks up, the devices that
   join, the requests with their IDs and keys hidden, what it tries on HTTPS and other ports), ready to paste into a
   Console report on GitHub. While it listens, Home Assistant shows fauxcloud as unavailable, online services pause
   and readings are not saved; it runs until you press Stop, or stops by itself when its sheet stays closed for an hour.
+  The small LED on the board stays lit while it listens; a firmware update and the MQTT connection test are refused
+  until it stops.
+- **Report a console** ([docs/report-a-console.md](docs/report-a-console.md), also on fauxcloud.org): the steps from
+  listening to sending the report, with screenshots. The Console report form on GitHub is rebuilt around that report
+  (the console's model and upload settings, the report, its setup page, photos); the README, CONTRIBUTING,
+  Troubleshooting and the Compatibility page link to it.
 
 ## [1.0.0] - 2026-11-20
 

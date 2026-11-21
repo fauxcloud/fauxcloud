@@ -35,7 +35,7 @@
 // the image marker and SW_VERSION are built from it (app_sys.cpp, app_core.cpp). The bench image says
 // "+diag" everywhere -- the marker, fw_version / build, the admin page, HA sw_version, and the forwarding / METAR
 // User-Agent and softwaretype (honest towards the services; a bug report names the image)
-#define FC_VERSION_BASE "1.1.0-dev.2"
+#define FC_VERSION_BASE "1.1.0-rc.1"
 #if FC_DIAG_BENCH
 #define FC_VERSION FC_VERSION_BASE "+diag"
 #else
