@@ -166,6 +166,7 @@ static void diag(Out& o, const Diag& d) {
   o.printf(",\"heap_low\":%s,\"heap_min_10m\":%lu,\"http_requests\":%lu,\"http_304\":%lu",
            d.heap_low ? "true" : "false", (unsigned long)d.heap_min_10m, (unsigned long)d.http_requests,
            (unsigned long)d.http_304);
+  o.printf(",\"capture\":%s", d.capture ? "true" : "false");
 #if FC_DIAG_BENCH  // bench keys
   o.raw(",\"ota_heap\":");
   if (d.ota_heap_have)

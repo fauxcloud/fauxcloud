@@ -118,7 +118,7 @@ fauxcloud answers almost everything with **200**, because a console that sees an
 | 401 | An `/api/admin/*` call from the home network (LAN face) that carries `X-Fauxcloud: 1` but no valid session: `{"error":"auth"}`, `Cache-Control: no-store`, connection closed (a request body is not read). Without the header, or from the AP side, the catch-all `200 success` as before. |
 | 404 | `/a/<hash8>/<name>` with an unknown hash or name (`text/plain` body `not found`); and a public endpoint that names a station that does not exist, or (no `station` given) when no station is registered yet (`{"error":"no such station"}`, see below). The only real 404s. |
 | 400 | `POST /api/admin/metar` and `POST /api/admin/wufc` with a refused body (`{"errors":["…"]}`) and `POST /api/admin/metar/lookup` with a bad `ids` (§3.3.8). |
-| 409 | `POST /api/admin/ota` while another firmware upload runs; refusals of the forwarding test, the airport-weather run and lookup and the forecast run (§3.3.7, §3.3.8). |
+| 409 | `POST /api/admin/ota` while another firmware upload runs or while the bridge listens to a new console; `POST /api/admin/capture/start` (§3.3.9); refusals of the forwarding test, the airport-weather run and lookup and the forecast run (§3.3.7, §3.3.8). |
 | 503 | During a firmware upload: page and asset loads (`/` on the LAN side, `/admin`, `/a/*`; `text/plain`, `Retry-After: 60`) and history endpoints (`{"error":"updating"}`); a history request that finds no memory for its copy (`{"error":"low memory, try again"}`); `POST /api/admin/wufc/run` on an idle line below its memory gate (`{"error":"low_memory"}`); `GET /tools` with no memory for its copy (empty body, `Connection: close`). Load shedding: **any** page or API request (the console upload excepted) is answered `503` with an empty body and `Connection: close` at once when the largest byte-addressable block is under 8 KB, or after waiting up to 200 ms when the free byte heap stays under 24 KB (`http_shed`, `http_paced` in `diag`). |
 
 `?station=` naming a station that does not exist gives **404** with `{"error":"no such station"}` on the public
@@ -170,7 +170,9 @@ The answer is always `success`, whether the sample is used or not. fauxcloud nev
 | Anything else | Kept as an "extra" (up to 4 per upload, key ≤ 15 chars, value ≤ 15 chars), remembered as a known key per station (up to 8), promotable to a sensor in admin. |
 
 The URI limit is 512 bytes; a longer upload is answered `success` and lost (`uploads_too_long`). Only `GET` is
-accepted on this path; any other method gets the catch-all `success`.
+accepted on this path; any other method gets the catch-all `success`. While the bridge listens to a new console (§3.3.9)
+every upload, from the fauxcloud Wi-Fi or the home network, is answered `success` and neither stored nor turned into a
+station (`uploads_skipped` in that section's GET).
 
 ### 2.2 Trust rules
 
@@ -200,7 +202,8 @@ Weathercloud ticked can repeat its WU upload within a cycle; the dedupe rule abo
 
 - **DNS:** every A query gets 192.168.77.1, in both modes. Other record types get an empty answer.
 - **NTP** (run mode only): answered only while fauxcloud has real time (SNTP, the router's DHCP NTP server, or a
-  browser seed). A clock that is held behind the stored history (more than 1 h) is not served either.
+  browser seed). A clock that is held behind the stored history (more than 1 h) is not served either. Listening to a
+  new console (§3.3.9) changes neither answer; it counts the NTP asks and answers.
 
 ---
 
@@ -257,6 +260,9 @@ Run mode (every route below is in the default TLS build; the HTTP-only build `FW
 | GET | `/api/admin/station/blocked` | LAN | CSRF + session | block list |
 | GET | `/api/admin/station/console` | LAN | CSRF + session | recent raw upload lines (redacted) |
 | POST | `/api/admin/ota` | LAN | CSRF + session | firmware upload |
+| GET | `/api/admin/capture` | LAN | CSRF + session | listening to a new console: state and records (§3.3.9) |
+| POST | `/api/admin/capture/start` | LAN | CSRF + session | start listening (§3.3.9) |
+| POST | `/api/admin/capture/stop` | LAN | CSRF + session | stop listening (§3.3.9) |
 | POST | `/api/admin/coredump` | LAN | CSRF + session + proof | download crash data |
 | DELETE | `/api/admin/coredump` | LAN | CSRF + session | clear crash data |
 | GET | `/api/admin/bootlog` | LAN | CSRF + session | the boot log, `text/plain` (§3.3.6) |
@@ -385,11 +391,13 @@ order they are sent:
 `hist_back` (array of unsigned counts, one element per station slot of the build: 1 element on the WROOM-32 build, 2 on
 the PSRAM profile; late readings that joined the open hour or were kept out), `dns_answered`, `ntp_answered`,
 `ntp_unanswered`, `mqtt_published`, `mqtt_failed`, `fwd_ok`, `fwd_fail`, `fwd_attempt_fail`, `fwd_skip`, `fwd_drop`,
-`heap_low`, `heap_min_10m`, `http_requests`, `http_304`,
+`heap_low`, `heap_min_10m`, `http_requests`, `http_304`, `capture` (true while the bridge listens to a new console,
+§3.3.9: starting or on),
 `heap_min8_t`, `heap_min8_ctx`, `heap_min8_socks` (the second in which `heap_min` was reached — uptime seconds,
 then the names of what was busy in that second, in this order: `http` (a page request ended or was being handled),
 `accept` (httpd accepted a socket: a client connecting), `fwd` (a forwarding send), `mqtt` (a publish), `store` (history
-writes due), `learn` (a learner pass), `ota` (a firmware write), `upload` (a console upload); then the open httpd sockets
+writes due), `learn` (a learner pass), `ota` (a firmware write), `upload` (a console upload), `capture` (listening to a
+new console); then the open httpd sockets
 at that moment. `null`, `[]`, `null` until the first sample; an empty list means none of these ran),
 `http_aborted`, `http_purged`, `http_shed`, `http_paced` (page answers that first waited, up to 200 ms, for earlier
 answers to be acknowledged while the byte heap was below 24 KB; one that still found it low is shed and counted in
@@ -1144,7 +1152,7 @@ GET object:
        "last_ok":"<ISO>"|null,
        "n":{"ok","dup","skip","nodata","reject","refused","limited","drop","heap","fail","unconfirmed"},
        "causes":{"dns","connect","read","5xx","429","other"},
-       "skip_why":null|"upload|http|store|learn|hour|mqtt|restart|link|heap|data|netout|turn"}],
+       "skip_why":null|"upload|http|store|learn|hour|mqtt|restart|link|capture|heap|data|netout|turn"}],
      "heap":{"tick_us_max"},   (the release; the bench build adds `wufc.diag` and, to `heap`, send_min, largest_min, send_ms_max,
                                tick_lock_us_max, tick_own_us_max and "tick_parts", §3.2.1)
      "task":{"up":bool,"stack_free":n},
@@ -1213,6 +1221,67 @@ rough area — the box is centred on a 0.1° grid point, about 10 km, never on t
 - A page request aborts a scheduled fetch (or the WU pull) before its answer's status line (`yield`, retried); the run once and
   the lookup never yield to a page.
 
+#### 3.3.9 Listen to a new console
+
+For a console that does not upload to fauxcloud: the bridge listens on its own Wi-Fi and records what the devices there
+send, so the report can go into a Console report. While it runs, the bridge is quiet like during a firmware upload:
+before the MQTT client stops, the bridge's availability topic gets a retained `offline` (QoS 1), so Home Assistant shows
+the entities unavailable; online jobs (forwarding, airport weather, the forecast) are held (busy word `capture`; a running
+job stops with the reason `capture`); every console upload, from the fauxcloud Wi-Fi or the home network, is answered
+`success` and neither stored nor turned into a station; the history's hour close and the learners go on. The AP, DNS and
+NTP (§2.4, unchanged) and the LAN face (dashboard, admin) keep working. Nothing is stored on flash; a restart ends it.
+It ends on Stop, a planned restart or factory reset, or 60 minutes in which no `GET /api/admin/capture` came (nobody
+watching). When it ends, MQTT starts again (`online`, the discovery; also when it is stopped right after the `offline`,
+before the client stopped). A capture and a firmware upload exclude each other; the admin's MQTT connection test is
+refused while it runs (`fauxcloud is listening to a new console`).
+
+What is recorded, only from the fauxcloud Wi-Fi (the AP side), each request becoming 1-5 short records:
+- **DNS**: each name asked, counted (up to 16 names; more are counted as `other`).
+- **Devices**: every join, DHCP lease and leave on the fauxcloud Wi-Fi; the list carries the address, the maker part of
+  the MAC (its first three bytes; `random` for a locally administered address) and the times. The whole MAC never leaves
+  the board.
+- **NTP**: asks and answers counted; the first ask is a record.
+- **Port 80**: every request, also unknown paths and methods: the method and the whole URI (in up to three `http`
+  records), the headers of a fixed list (`Host`, `User-Agent`, `Content-Type`, `Content-Length`, `Accept`,
+  `Accept-Encoding`, `Connection`, `Transfer-Encoding`, `Expect`, `Cache-Control`, `X-Requested-With`; `Authorization`,
+  `Cookie`, `X-Api-Key`, `X-Auth-Token` as `***`), the first 128 bytes of a body (one receive, up to 3 s; a chunked body
+  is not read), and `closed-before-reply` when the device closed before the answer. The answers do not change.
+- **Ports 443, 8080, 8443, 8000, 8880, 1883, 8883, 5000** (listening only during a capture): the first bytes of a
+  connection, read for 300 ms (at most 512 B), then the connection is closed; nothing is answered. A TLS ClientHello
+  becomes its facts (`verdict` against the TLS 1.2 suites fauxcloud's TLS library can serve: `ecdhe-ecdsa-gcm`, `chacha`,
+  `ecdhe-rsa-gcm`, `no-common-curve`, `cbc-only`, `rsa-kx-only`, `tls13-only`, `tls-old`, `unknown`; versions, the server
+  name, the first 12 suites, the groups, `sigalg`, `mfl`, `alpn`, ` cut` when the bytes ended inside it); an HTTP request
+  its line, every header (secret ones `***`) and the body's head (in the report under its `tcp` record's group); an MQTT CONNECT a summary (version, flags, keep-alive,
+  the client id's length; never the id, user or password); anything else 16 bytes as hex. One connection is read at a
+  time; another one meanwhile is closed and recorded as `busy, closed`.
+- **Hidden before a record is stored**: the value of every query, form or JSON key that contains `key`, `pass`, `pwd`,
+  `token`, `secret`, `auth`, `sign` or `cred`, or is `id`, `uid`, `did`, `devid`, `deviceid`, `device_id`, `mac`, `sn`,
+  `serial`, `wid`, `user`, `username`, `login`, `imei`, `sid`, `siteid`, `stationid` or `clientid`, or ends in `_id` /
+  `-id` (case-insensitive, %-decoded); the path segment after `wid`, `key`, `id`, `token`, `user`, `pass`, `station`,
+  `device`, `dev`, `sn`, `serial` or `mac`, and any path segment of 16 or more letters, digits, `-` and `_` with both
+  letters and digits (a key in the path). A body head with control bytes is shown as hex (32 B); other bytes above
+  ASCII (UTF-8) count as text: redacted like any text, then shown as `?`.
+
+| Route | Body / query | Answer |
+|---|---|---|
+| `GET /api/admin/capture` | `?since=<seq>` (0 or absent: from the start) | the object below; every GET keeps an unwatched capture from stopping |
+| `POST /api/admin/capture/start` | none, or `{"idle_s":N}` (the no-poll limit for a bench, 60-3600 s, default 3600) | `{"ok":true}` (the start then runs: the GET says `starting`, `on`, or `off` with `ended` `heap`); 409 `{"error":"ota"}` during a firmware upload, `{"error":"restart"}` with a restart or factory reset planned, `{"error":"on"}` when one runs |
+| `POST /api/admin/capture/stop` | none | `{"ok":true}` (also when none runs) |
+
+The GET object: `state` (`off`, `starting`, `on`), `ended` (after a stop: `stop`, `idle`, `restart`, `heap`; else ""),
+`blocked` (why a start would be refused now: `ota`, `restart` or ""), `elapsed_s` (listening time; after the stop, the
+time it listened), `idle_left_s`, `started_utc` (unix seconds, null without a real clock at the start), `clock` (the bridge
+has a real clock now), `ntp` (`asked`, `answered`), `uploads_skipped`, `vendor` (the maker prefix of the first device that
+sent something other than a phone's connectivity probe or DNS, or null), `seq` (the newest change), `lost` (records that
+left the board before any GET returned them), `more` (more records wait: ask again with `since` = the last `seq` returned),
+`clients` (`ip` or null, `vendor`, `joined_s` (null: there before the start), `left_s` (null while there), `n` records,
+`active`), `clients_over`, `dns` (`other`, `names`: `name`, `n`, `types` `A`/`AAAA`/`other`, `client` = the asker's last
+address byte), `events` (at most 8 per answer, oldest change first: `id` (stable: a repeat keeps it), `seq`, `group` (the
+`id` of the first record of its request), `kind` (`join`, `lease`, `leave`, `ntp`, `tcp`, `tls`, `http`, `hdr`, `body`,
+`mqtt`, `raw`), `client` (the device's last address byte, 0 = unknown), `n` (times seen: a repeat counts here and returns
+with a new `seq`), `t_first_s`, `t_last_s` (seconds since the start), `text`). After the stop the lists are empty and the
+counters stay. A start press clears the last run's counters, so a GET while `starting` answers `seq` 0 and `lost` 0.
+
 ### 3.4 Firmware upload (OTA)
 
 `POST /api/admin/ota` — LAN face, CSRF + session. Body = the raw `.bin` image (`Content-Type:
@@ -1221,7 +1290,7 @@ application/octet-stream`), `Content-Length` required.
 - Refused at once (200 + JSON, connection closed) when memory is low (`{"error":"low memory — restart fauxcloud
   first"}`), when the length is 0 or larger than the app slot (`{"error":"the file must be a firmware image no larger
   than the app slot"}`), while a forwarding send cannot stop in time (`{"error":"busy sending to an online service,
-  try again in a few seconds"}`), or when the server cannot hand the connection to the update task (`{"error":"busy, try again"}`). The app slot is 1 900 544 bytes on the WROOM-32 build (1 835 008 on the PSRAM profile). 409 `{"error":"an update is already running"}` when one runs.
+  try again in a few seconds"}`), or when the server cannot hand the connection to the update task (`{"error":"busy, try again"}`). The app slot is 1 900 544 bytes on the WROOM-32 build (1 835 008 on the PSRAM profile). 409 `{"error":"an update is already running"}` when one runs; 409 `{"error":"capture"}` (connection closed) while the bridge listens to a new console (§3.3.9).
 - The image is streamed into the inactive slot. It must start with the ESP32 image magic and carry the fauxcloud
   image marker; otherwise `{"error":"not an ESP32 firmware image"}` / `{"error":"not a fauxcloud image"}`. Other
   errors: `low memory`, `update did not start: ...`, `upload stalled` (~6 s without data), `connection lost`,

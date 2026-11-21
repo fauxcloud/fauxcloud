@@ -6,11 +6,14 @@ body:
   - type: markdown
     attributes:
       value: |
-        A short report is enough, and it is how a console model gets onto the list. What is already known about
-        each console is in `docs/station-profiles.md`.
+        A short report is enough, and it is how a console model gets checked. The steps, with pictures, are in
+        [Report a console](https://fauxcloud.org/docs/report-a-console/): in fauxcloud's Settings, open
+        **fauxcloud Wi-Fi for your station**, then **Listen to a new console**, connect the console, then Copy the
+        report and paste it below. Listening needs fauxcloud 1.1 or later (Settings → Maintenance shows the version).
 
-        The rule of thumb: if your console's setup page has a Weather Underground box, it may work (not tested yet;
-        this report tells us). If it pairs only through an app, it will not.
+        If your console's setup page has a Weather Underground box, it may work; nothing beyond the verified console
+        has been tested yet. A console that pairs only through an app has no setup page to point at fauxcloud, so it
+        most likely will not; a report still helps.
 
         Never send passwords, keys, the crash file (it contains your passwords) or the exact location of your station.
   - type: input
@@ -27,107 +30,68 @@ body:
       label: Where you bought it
       description: The country and the kind of shop is enough.
       placeholder: Germany, online marketplace, 2026
-  - type: input
-    id: firmware
-    attributes:
-      label: Console firmware version
-      description: Shown on the console's setup page.
-    validations:
-      required: true
   - type: dropdown
-    id: frequency
+    id: upload
     attributes:
-      label: Region and frequency of the outdoor sensor
+      label: What upload settings does the console's setup page have?
       options:
-        - 868 MHz (EU)
-        - 915 MHz (US)
-        - Other
-        - I don't know
-    validations:
-      required: true
-  - type: dropdown
-    id: wubox
-    attributes:
-      label: Does the console's setup page have a Weather Underground box?
-      options:
-        - "Yes"
-        - "No, it pairs only through an app"
-        - "No, something else (describe below)"
-    validations:
-      required: true
-  - type: textarea
-    id: pairing
-    attributes:
-      label: Pairing
-      description: |
-        How you opened the console's setup: which button, the name of the network it opened (for example `WWS-`
-        plus six characters), the address of its setup page, and which boxes the page has (Wi-Fi, Weather
-        Underground, Weathercloud, time server, others).
-    validations:
-      required: true
-  - type: textarea
-    id: capture
-    attributes:
-      label: What the console sends
-      description: |
-        In fauxcloud's settings page, open the station, the **Console** tab, and copy the last lines. The station
-        name and key are already hidden there. Also list the unknown fields that appear under **Extra sensors**.
-      render: text
-    validations:
-      required: true
-  - type: dropdown
-    id: uploaded
-    attributes:
-      label: Did it upload to fauxcloud?
-      options:
-        - Yes, readings arrive
-        - It joined fauxcloud's Wi-Fi but never uploaded
-        - It never joined fauxcloud's Wi-Fi
+        - A Weather Underground box (station ID and key)
+        - A custom server (host, port, path)
+        - Both
+        - None, it pairs only through an app
+        - I could not open the setup page
         - Something else (describe below)
     validations:
       required: true
   - type: textarea
-    id: worked
+    id: report
     attributes:
-      label: What worked and what did not
+      label: The report
       description: |
-        Which fields were missing? Did the pressure read the factory value (1013.2 hPa / 29.92 inHg)? Did it need
-        its power adapter to upload? How often did it send (the Console tab shows the times)?
+        Paste the report from **Listen to a new console** (Copy, or the downloaded file). Read it first and delete
+        anything that is yours: fauxcloud hides the values it recognises as IDs, keys and passwords, but it cannot know
+        every field name. A console that already uploads: paste the last lines of its station's **Console** tab instead.
+      render: text
     validations:
       required: true
   - type: textarea
-    id: odd
+    id: setup
     attributes:
-      label: Anything odd
-      description: A field with a strange value, more than fourteen fields, a console that sends nothing, and so on.
+      label: The setup page
+      description: |
+        How you opened it (which button, which network the console opened). Which boxes does it have: Wi-Fi, Weather
+        Underground, Weathercloud, a custom server, a time server, others? For a custom server, what did host, port and
+        path say before you changed them?
+  - type: input
+    id: firmware
+    attributes:
+      label: Console firmware version
+      description: Shown on the console's setup page, if it shows one.
+  - type: input
+    id: version
+    attributes:
+      label: fauxcloud version
+      description: Settings → Maintenance shows it. The Listen report carries it in its first line already.
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else
+      description: |
+        What worked and what did not, a field with a strange value, the region and frequency of the outdoor sensor
+        (for example 868 MHz in the EU), and anything odd.
   - type: textarea
     id: photos
     attributes:
       label: Photos
       description: |
         Drop in a photo of the label on the back of the console (cover any MAC address or serial number on it), and
-        one of its setup page after it joined fauxcloud's Wi-Fi. Cover your Wi-Fi name and password.
-  - type: textarea
-    id: diag
-    attributes:
-      label: Diagnostics block (optional)
-      description: |
-        From your home network, open `http://fauxcloud.local/api/live` and copy the `"diag":{...}` part. You may
-        replace `sta_ip` and `hostname` with `x`.
-      render: json
-  - type: input
-    id: version
-    attributes:
-      label: fauxcloud version
-      description: Settings → Maintenance shows it.
-    validations:
-      required: true
+        one of its setup page. Cover your Wi-Fi name and password.
   - type: checkboxes
     id: checks
     attributes:
       label: Before you send it
       options:
-        - label: This report contains no password, key, crash file or exact location.
+        - label: I read the report. It contains no password, key, crash file or exact location.
           required: true
         - label: The console's lines from this report may be used in the project's console list and tests.
           required: true

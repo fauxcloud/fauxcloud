@@ -15,6 +15,7 @@
 
 #include "src/adopt.h"
 #include "src/auth.h"
+#include "src/capture.h"
 #include "src/clock.h"
 #include "src/heapinfo.h"
 #include "src/log.h"
@@ -34,7 +35,7 @@
 // the image marker and SW_VERSION are built from it (app_sys.cpp, app_core.cpp). The bench image says
 // "+diag" everywhere -- the marker, fw_version / build, the admin page, HA sw_version, and the forwarding / METAR
 // User-Agent and softwaretype (honest towards the services; a bug report names the image)
-#define FC_VERSION_BASE "1.1.0-dev.1"
+#define FC_VERSION_BASE "1.1.0-rc.1"
 #if FC_DIAG_BENCH
 #define FC_VERSION FC_VERSION_BASE "+diag"
 #else
@@ -312,6 +313,7 @@ void requestApRestart();
 void netReinit();                     // network watchdog: drop and rejoin the home Wi-Fi once
 void requestMdnsRestart();
 void udpStart(bool ntp);
+bool apLeaseOf(const uint8_t mac[6], uint32_t* ip);  // the AP's DHCP lease of a device (false: none seen since boot)
 
 // ---------------------------------------------------------------- app_mqtt.cpp
 void mqttLoop();                      // client start/restart requests, MQTT test ticks
@@ -335,6 +337,11 @@ void heartbeat();
 Diag diagNow();
 void mqttTestStart(const char* host, uint16_t port, const char* user, const char* pass);
 void mqttTestJson(Out& o);
+// The capture mode's start (loop task): the bridge's availability "offline", retained, QoS 1, written now -- a clean
+// disconnect would drop the will. false = no client or not connected (nothing to wait for).
+bool mqttCaptureOffline();
+bool mqttOfflineAcked();  // the broker acknowledged that "offline"
+bool mqttClientGone();    // no MQTT client exists (stopped)
 
 // ---------------------------------------------------------------- app_http.cpp
 void httpStart();
@@ -407,5 +414,22 @@ void fwdHeapState(bool* running, bool* ran_since, uint32_t* pre_send);
 void fwdNoteHeapLow(uint32_t low);    // ... the sample's local minimum goes to fwd_heap_min
 #endif
 bool fwdIdle();                       // no send posted or running (otaStart waits for it)
+
+// ---------------------------------------------------------------- app_capture.cpp ("Listen to a new console", src/capture.h)
+bool captureQuiet();    // the mode is starting or on: console uploads not stored, online jobs held, MQTT not started
+bool captureMqttOff();  // the MQTT client must be stopped (mqttLoop stops it, and starts it again once this clears)
+bool captureOn();       // listening: records are written
+void captureTick();     // loop(): the start / stop order, the peek slot, the capture window's heap minima
+void registerCapture(httpd_handle_t srv);                          // /api/admin/capture, /start, /stop
+void captureRecord(const CapUnit& u, uint32_t ip, bool active);   // a request's records (active: not a phone's probe)
+void captureDns(const char* name, uint16_t qtype, uint32_t ip);   // udp task
+void captureNtp(bool answered, uint32_t ip);                        // udp task
+void captureApJoin(const uint8_t mac[6]);                           // Wi-Fi event task
+void captureApLeave(const uint8_t mac[6]);
+void captureApLease(uint32_t ip, const uint8_t mac[6]);
+void captureCountSkipped();  // a console upload answered, not stored (onUpload)
+void captureHeapFeed(uint32_t low8, uint32_t largest8);  // heapSample, once a second: the capture window's minima
+CapHttpScratch* captureScratchTake();         // httpd task: the port-80 scratch, or nullptr when the buffers are gone
+void captureScratchGive(uint32_t stack_left);  // httpd task: done with it (the task's lowest free stack, for the stop line)
 
 }  // namespace app

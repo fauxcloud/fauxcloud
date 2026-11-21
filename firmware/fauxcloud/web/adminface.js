@@ -24,8 +24,9 @@ const icon = k => `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="curre
 // loaded on first use
 const STATION_JS = '/*@asset admin-station.js*/', WHY_JS = '/*@asset outlook-why.js*/', OUTLOOK_JS = '/*@asset outlook.js*/', LEARN_JS = '/*@asset admin-learn.js*/',
   FWD_JS = '/*@asset admin-fwd.js*/', METAR_JS = '/*@asset admin-metar.js*/', SHEETS_JS = '/*@asset admin-sheets.js*/',
+  CAPTURE_JS = '/*@asset admin-capture.js*/',  // "Listen to a new console" (opened from Publishing)
   // mqtt, name, security and maint arrive with admin-sheets.js
-  LAZY_SHEETS = ['station', 'publish', 'weather', 'learn', 'fwd', 'metar', 'mqtt', 'name', 'security', 'maint'], LATER = ['mqtt', 'name', 'security', 'maint'];
+  LAZY_SHEETS = ['station', 'publish', 'weather', 'learn', 'fwd', 'metar', 'mqtt', 'name', 'security', 'maint', 'capture'], LATER = ['mqtt', 'name', 'security', 'maint'];
 const WF = FC.w('adminface', {
   // sign-in and the shared failure lines
   no_answer: 'No answer from fauxcloud. Try again.', ended: 'Your session ended. Sign in again.', copied: 'Copied',
@@ -91,6 +92,8 @@ const WF = FC.w('adminface', {
   ap_lead: 'fauxcloud’s own Wi-Fi, <b>{ap}</b>. Connect your weather station’s console to this network (on its adapter, hold BARO on the console for 3 seconds until AP shows, then pick this network on the console’s setup page).',
   ap_n: { one: '{n} console connected now.', other: '{n} consoles connected now.' },
   password: 'Password', copy: 'Copy', hides: 'Hides by itself after 60 seconds.', reveal_pw: 'Your admin password, to show it',
+  // a console on this Wi-Fi that never uploads: its own sheet (admin-capture.js)
+  cap_h: 'Console not showing up?', cap_why: 'fauxcloud listens to what it sends and makes a report you can paste on GitHub.', cap_btn: 'Listen to a new console',
   show_pw: 'Show password', pw_hidden: 'Password hidden', show_why: 'You need it to pair a console. Asks for your admin password first.',
   change_pw: 'Change password', new_pw: 'New password', min8: 'At least 8 characters.',
   ap_warn: '<b>Your console will stop uploading.</b>It keeps the old password until you pair it again: hold BARO for 3 seconds until AP shows and enter the new password on its setup page.',
@@ -101,6 +104,8 @@ const WF = FC.w('adminface', {
   lon_h: 'From −180 to 180. East is positive.',
   loc_pick: 'Picking a place fills these with its main city. Change them only if the station is far from it: sunrise and sunset move by about 4 minutes per degree of longitude.',
   out_of_range: 'Out of range.',
+  // the line on the home while the bridge listens to a new console (its sheet: admin-capture.js)
+  cap_line: 'Listening to a new console: Home Assistant and online services are paused.', cap_open: 'Open',
 });
 // read when drawn: admin.js runs before its language pack arrives
 const WIFI_FAIL = c => own({ auth: WF.wf_auth, no_ap: WF.wf_no_ap, dhcp: WF.wf_dhcp, timeout: WF.wf_timeout, busy: WF.wf_busy }, c);
@@ -148,7 +153,7 @@ async function loadAll() {
   API.live = live;  // the status row and its Details on the home
   API.status = { sta_ip: d.sta_ip, sta_rssi: d.sta_rssi, mqtt_up: d.mqtt_up, fw_version: (d.fw_version || '').replace(/^fauxcloud /, ''), uptime_s: live.uptime_s || 0,
     heap_free: d.heap_free, heap_low: d.heap_low, ap_clients: d.ap_clients, build: d.build || '', ota: d.ota_state, slot: d.ota_slot,
-    reset: d.last_reset, restarts: d.restarts, crash: d.last_crash };
+    reset: d.last_reset, restarts: d.restarts, crash: d.last_crash, capture: !!d.capture };
   API.bridge = (await api('GET', '/api/admin/bridge')).effective || {};
   // the console last turned away for lack of a slot (an hour at most), for the line under the Stations tiles
   API.noSlot = await FC.get('/api/bridge/status', { etag: false }).then(r => r.data.no_slot_id || '', () => '');
@@ -278,6 +283,7 @@ function home() {
     <header class="glass top"><span class="brand"><a href="${SITE_URL}" target="_blank" rel="noopener">${MARK}fauxcloud</a> <span class="what">${WF.settings}</span></span><span class="sp"></span>
       <a class="pill" href="/" id="toDash">${WF.dashboard}</a><button type="button" class="pill" id="langBtn" hidden>EN</button><button type="button" class="pill" id="theme" aria-label="${WF.theme}">◐</button><button type="button" class="pill" id="signout">${WF.sign_out}</button></header>
     ${st.heap_low ? `<div class="callout warn" role="status">${b.max_stations_cap === 1 ? WF.mem_1 : WF.mem_n}</div>` : ''}
+    ${st.capture ? `<div class="callout" role="status">${WF.cap_line} <button type="button" class="link" data-sheet="capture">${WF.cap_open}</button></div>` : ''}
     ${left && !stepsHidden() ? `<section class="glass card"><div class="row"><h2 style="flex:1">${WF.next_steps}</h2><button type="button" class="pill" id="hideSteps">${WF.hide}</button></div><ul class="checklist">${steps.map(([ok, l, to]) => `<li class="${ok ? 'done' : ''}"><span class="box">${ok ? '✓' : ''}</span>${to && !ok ? `<button type="button" class="link" data-sheet="${to}">${l}</button>` : l}</li>`).join('')}</ul></section>` : ''}
     <h2 class="sect">${WF.sect_st}</h2><div class="tiles">${API.stations.map((x, i) => T('st' + i, icon('station'), esc(x.id),
       // a station problem reads like on the dashboard: the hatched chip beside the name; offline = grey dot + words
@@ -351,7 +357,7 @@ function openSheet(key, from) {
   const name = key.startsWith('st') ? 'station' : key;
   if (!SHEETS[name] && LAZY_SHEETS.includes(name)) { // these sheets arrive with admin-station.js on first use
     SH = { key, err: {}, msg: '', icon: icon('station'), title: WF.loading_t, body: () => `<p class="hint loading">${WF.loading}</p>` };
-    (name === 'weather' ? FC.lazy(OUTLOOK_JS) : Promise.resolve()).then(() => FC.lazy(name === 'weather' ? WHY_JS : name === 'learn' ? LEARN_JS : name === 'fwd' ? FWD_JS : name === 'metar' ? METAR_JS : LATER.includes(name) ? SHEETS_JS : STATION_JS)).then(() => { if (SH && SH.key === key) openSheet(key, from); }, () => {
+    (name === 'weather' ? FC.lazy(OUTLOOK_JS) : Promise.resolve()).then(() => FC.lazy(name === 'weather' ? WHY_JS : name === 'learn' ? LEARN_JS : name === 'fwd' ? FWD_JS : name === 'metar' ? METAR_JS : name === 'capture' ? CAPTURE_JS : LATER.includes(name) ? SHEETS_JS : STATION_JS)).then(() => { if (SH && SH.key === key) openSheet(key, from); }, () => {
       if (!SH || SH.key !== key) return;
       SH.body = () => `<p class="error">${WF.lazy_fail}</p><div class="row end"><button type="button" class="btn primary" id="lazyAgain">${WF.again}</button></div>`;
       SH.click = b => { if (b.id === 'lazyAgain') openSheet(key, from); }; draw();
@@ -474,6 +480,9 @@ const SHEETS = {
         : r.asking ? `${field('aprev', WF.reveal_pw, text('aprev', r.pw, { type: 'password', ac: 'current-password', err: r.err }), '', r.err)}
             ${A.lock ? `<p class="error">${FC.t(WF.lock, { s: `<b data-lock>${A.lock}</b>` })}</p>` : ''}<div class="row"><button type="button" class="btn quiet" id="apCancel">${WF.cancel}</button><button type="button" class="btn primary" id="apGo" ${A.lock || r.busy ? 'disabled' : ''}>${WF.show_pw}</button></div>`
         : `<div class="secret" aria-label="${WF.pw_hidden}">••••••••••••</div><div class="row"><button type="button" class="btn quiet" id="apAsk">${WF.show_pw}</button><span class="hint">${WF.show_why}</span></div>`}
+        <h3 style="margin-top:8px">${WF.cap_h}</h3>
+        <p class="hint">${WF.cap_why}</p>
+        <div class="row"><button type="button" class="btn quiet" id="capOpen">${WF.cap_btn}</button></div>
         <h3 style="margin-top:8px">${WF.change_pw}</h3>
         ${field('apnew', WF.new_pw, text('apnew', r.newp, { type: 'password', ac: 'new-password' }), WF.min8)}
         <div class="callout warn">${WF.ap_warn}</div>
@@ -482,6 +491,7 @@ const SHEETS = {
       input(t) { if (t.id === 'aprev') r.pw = t.value; if (t.id === 'apnew') { r.newp = t.value; $('#apsave').disabled = !(r.ack && r.newp.length >= 8); } },
       change(t) { if (t.id === 'apack') { r.ack = t.checked; $('#apsave').disabled = !(r.ack && r.newp.length >= 8); } },
       click(b) {
+        if (b.id === 'capOpen') { openSheet('capture', b); return; }  // its own sheet (admin-capture.js)
         if (b.id === 'apAsk') { r.asking = true; r.err = ''; draw('aprev'); return; }
         if (b.id === 'apCancel') { r.asking = false; r.pw = ''; draw(); return; }
         if (b.id === 'apGo') { // POST /api/admin/ap-pass/reveal {nonce, proof}; shares the sign-in lockout
@@ -531,6 +541,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && !$
 const healthOpen = () => FC.lazy(STATION_JS).then(() => { const g = $('#hgrid'); if (g) g.innerHTML = healthDetails(API.live); }, () => {});
 FC.poll('home', { every: 30e3, due: Date.now() + 30e3, url: () => !SH && API.stations && $('#apN') ? '/api/live' : null, on: res => {
   const d = res.data, n = $('#apN');
+  if (d.diag && !!d.diag.capture !== !!API.status.capture) { API.status.capture = !!d.diag.capture; API.live = d; home(); return; }  // listening began or ended
   if (n && d.diag) { n.textContent = d.diag.ap_clients ?? 0; API.status.ap_clients = d.diag.ap_clients; }
   API.live = d; const h = $('#health');
   if (h) { h.querySelector('.states').outerHTML = healthRow(d, !!API.settings.mqtt_host); if (h.open) healthOpen(); }

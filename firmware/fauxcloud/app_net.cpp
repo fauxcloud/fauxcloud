@@ -85,6 +85,18 @@ static void leaseRemember(uint32_t ip, const uint8_t mac[6]) {
   portEXIT_CRITICAL(&gLeaseMux);
 }
 
+bool apLeaseOf(const uint8_t mac[6], uint32_t* ip) {
+  bool found = false;
+  portENTER_CRITICAL(&gLeaseMux);
+  for (auto& l : gLease)
+    if (l.ip && !memcmp(l.mac, mac, 6)) {
+      *ip = l.ip;
+      found = true;
+    }
+  portEXIT_CRITICAL(&gLeaseMux);
+  return found;
+}
+
 bool peerMac(uint32_t ip, SrcIf via, uint8_t mac[6]) {
   if (!ip) return false;
   if (via == SrcIf::Ap) {
@@ -143,6 +155,7 @@ static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
   switch (event) {
     case ARDUINO_EVENT_WIFI_AP_STACONNECTED: {
       const uint8_t* m = info.wifi_ap_staconnected.mac;
+      captureApJoin(m);
       if (apEvent(true, m, &rn, &rm) != ApLine::None)
         logf("AP", "client joined MAC %02X:%02X:%02X:%02X:%02X:%02X%s", m[0], m[1], m[2], m[3], m[4], m[5],
              rateSuffix(sx, sizeof sx, rn, rm));
@@ -150,6 +163,7 @@ static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     }
     case ARDUINO_EVENT_WIFI_AP_STADISCONNECTED: {
       const uint8_t* m = info.wifi_ap_stadisconnected.mac;
+      captureApLeave(m);
       if (apEvent(false, m, &rn, &rm) != ApLine::None)
         logf("AP", "client left MAC %02X:%02X:%02X:%02X:%02X:%02X%s", m[0], m[1], m[2], m[3], m[4], m[5],
              rateSuffix(sx, sizeof sx, rn, rm));
@@ -157,6 +171,7 @@ static void onWiFiEvent(WiFiEvent_t event, WiFiEventInfo_t info) {
     }
     case ARDUINO_EVENT_WIFI_AP_STAIPASSIGNED: {
       leaseRemember(info.wifi_ap_staipassigned.ip.addr, info.wifi_ap_staipassigned.mac);
+      captureApLease(info.wifi_ap_staipassigned.ip.addr, info.wifi_ap_staipassigned.mac);
       portENTER_CRITICAL(&gApLineMux);
       const bool lease = gApLine.lease();
       portEXIT_CRITICAL(&gApLineMux);
@@ -603,6 +618,7 @@ static void handleDns(int s, NameLogLimiter& lim) {
   }
   sendto(s, out, m, 0, (struct sockaddr*)&from, fl);
   gDnsAnswered++;
+  captureDns(q.name, q.qtype, from.sin_addr.s_addr);
   bool first;
   if (lim.shouldLog(q.name, millis() / 1000, &first)) {  // a name's repeats are chatter
     char ipStr[16];
@@ -637,6 +653,7 @@ static void handleNtp(int s, NameLogLimiter& lim) {
   bool first;  // a client's repeats are chatter
   if (ntpAnswer((uint32_t)tv.tv_sec) == NtpAnswer::None || held) {
     gNtpUnanswered++;
+    captureNtp(false, from.sin_addr.s_addr);
     if (lim.shouldLog(key, millis() / 1000, &first))
       logl(first ? Log::Event : Log::Chatter, "NTP", "request from %s (VN=%d mode=%d) -- NOT answered, %s%s", ipStr, r.vn, r.mode,
            held ? "the clock is held (behind the stored history)" : "no real time yet (SNTP, DHCP-NTP or a browser seed)",
@@ -646,6 +663,7 @@ static void handleNtp(int s, NameLogLimiter& lim) {
   ntpBuildReply(in, r, (uint32_t)tv.tv_sec, (uint32_t)tv.tv_usec, out);
   sendto(s, out, sizeof out, 0, (struct sockaddr*)&from, fl);
   gNtpAnswered++;
+  captureNtp(true, from.sin_addr.s_addr);
   if (lim.shouldLog(key, millis() / 1000, &first))
     logl(first ? Log::Event : Log::Chatter, "NTP", "request from %s (VN=%d mode=%d) -- answered (%s), unix=%lu (logged once per 10 min per client)", ipStr,
          r.vn, r.mode, timeSrcName(timeSrc()), (unsigned long)tv.tv_sec);

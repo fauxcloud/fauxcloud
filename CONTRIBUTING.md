@@ -11,7 +11,7 @@ Issues and pull requests are read in batches, roughly once a week. No response t
 
 | Contribution | How |
 |---|---|
-| **A report for a console that is not on the list** | The [console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml) form. A model is called supported only with a report from a real console: the raw lines from the station's Console tab in Settings and photos of the label and the setup page. |
+| **A report for a console that is not on the list** | [Report a console](docs/report-a-console.md) shows how: fauxcloud listens to what your console sends and makes a report you paste into the [console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml) form. A model is listed as working only with a report from a real console, with photos of the label and the setup page. |
 | **A bug report** | The [bug report](https://github.com/fauxcloud/fauxcloud/issues/new?template=bug_report.yml) form, with the diagnostics block it asks for. |
 | **A fix** | Open an issue first (or use the bug report). When the maintainer labels it `accepted`, send a pull request that fixes it and adds a test that fails without the fix. |
 | **A new feature** | Please do not open a feature pull request without discussing it first. Feature pull requests without an `accepted` issue are closed; forks are always welcome. |

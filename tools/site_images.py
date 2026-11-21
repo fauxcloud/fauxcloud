@@ -8,6 +8,7 @@ the variants land in site/assets/ under <name>-<width>.jpg and are committed.
 Usage (PIL from the dev machine's Python; python -I sees no user site-packages, so run it plainly):
     python tools/site_images.py SRC_DIR            # write the variants into site/assets/, print the bytes
     python tools/site_images.py SRC_DIR --list     # the table only
+    python tools/site_images.py SRC_DIR --only shot-listen-start.png ...   # just these sources (the others stay)
 """
 import argparse
 import io
@@ -34,12 +35,19 @@ PHOTOS = {
     "shot-online.png": ("shot-online", (300, 750)),
     "shot-outlook.png": ("shot-outlook", (300, 750)),
     "shot-settings.png": ("shot-settings", (300, 750)),
+    # "Report a console": the laptop mock of the admin face (test/tools/capture_mock.py ?shot=..., fictional data), the same
+    # 375 px at 2x, dark
+    "shot-listen-home.png": ("shot-listen-home", (300, 750)),
+    "shot-listen-wifi.png": ("shot-listen-wifi", (300, 750)),
+    "shot-listen-start.png": ("shot-listen-start", (300, 750)),
+    "shot-listen-report.png": ("shot-listen-report", (300, 750)),
 }
 # variants encoded at another quality: cases-560 and the case renders are re-encoded one step lower (79); the
-# screenshots are q79 for size (their text stays crisp at 79, and 85 costs about 81 KB more over the five); every other
+# screenshots are q79 for size (their text stays crisp at 79; 85 cost about 81 KB more over the first five); every other
 # variant keeps QUALITY
 QUALITY_FOR = {"cases-560.jpg": 79, "case-340.jpg": 79, "case-680.jpg": 79}
-QUALITY_FOR.update({"shot-%s-%d.jpg" % (n, w): 79 for n in ("dashboard", "airport", "online", "outlook", "settings") for w in (300, 750)})
+QUALITY_FOR.update({"shot-%s-%d.jpg" % (n, w): 79 for n in ("dashboard", "airport", "online", "outlook", "settings",
+                                                                 "listen-home", "listen-wifi", "listen-start", "listen-report") for w in (300, 750)})
 
 
 def clean(im):
@@ -84,8 +92,12 @@ def main(argv):
     ap = argparse.ArgumentParser(prog="site_images.py", description="Make the site's photo variants (metadata stripped).")
     ap.add_argument("src", help="the folder that holds the original photos")
     ap.add_argument("--list", action="store_true", help="print the table, write nothing")
+    ap.add_argument("--only", nargs="+", metavar="NAME", help="only these source files (the rest of the table untouched)")
     args = ap.parse_args(argv)
-    rows = run(PHOTOS, pathlib.Path(args.src), not args.list)
+    table = {k: v for k, v in PHOTOS.items() if not args.only or k in args.only}
+    if args.only and len(table) != len(args.only):
+        raise SystemExit("site_images: not in the table: %s" % ", ".join(sorted(set(args.only) - set(table))))
+    rows = run(table, pathlib.Path(args.src), not args.list)
     for name, w, h, n in rows:
         print("%-26s %5d x %-5d %8d B" % (name, w, h, n))
     return 0

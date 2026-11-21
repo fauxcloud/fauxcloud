@@ -148,6 +148,8 @@ void requestForget(int slot) {
 static MqttStateLine gMqttLine;
 static portMUX_TYPE gMqttLogMux = portMUX_INITIALIZER_UNLOCKED;
 static char gMqttErr[56];  // the last error's detail ("" = none); MQTT task only
+static std::atomic<int> gOfflineMsg{-2};    // the capture's "offline" publish id (MQTT_EVENT_PUBLISHED matches it)
+static std::atomic<bool> gOfflineAck{false};
 static void mqttStateLine(bool up) {
   uint32_t n = 1, min = 0;
   portENTER_CRITICAL(&gMqttLogMux);
@@ -173,6 +175,9 @@ static void mqttEvent(void*, esp_event_base_t, int32_t id, void* data) {
     case MQTT_EVENT_DISCONNECTED:
       gMqttConnected = false;
       mqttStateLine(false);
+      break;
+    case MQTT_EVENT_PUBLISHED:
+      if (e->msg_id == gOfflineMsg.load()) gOfflineAck = true;  // the capture's retained "offline" is in
       break;
     case MQTT_EVENT_ERROR:
       if (!e->error_handle) break;
@@ -256,6 +261,7 @@ static bool stalled() { return gStallUntilMs && (int32_t)(millis() - gStallUntil
 static bool publish(const char* topic, const char* payload, bool retain) {
   if (!gMqttConnected) return false;
   if (otaActive()) return false;  // quiet mode: no MQTT buffers while the OTA writes (a good OTA restarts)
+  if (captureQuiet()) return false;  // listening to a new console: nothing is published (its "offline" goes on its own)
   if (stalled()) {
     gPublishFails++;
     return false;
@@ -282,6 +288,18 @@ static bool publish(const char* topic, const char* payload, bool retain) {
   return true;
 }
 static bool paceOk() { return gMqtt && !stalled(); }
+
+bool mqttCaptureOffline() {
+  gOfflineAck = false;
+  if (!gMqtt || !gMqttConnected || !gBridgeTopic[0]) return false;
+  const int id = esp_mqtt_client_publish(gMqtt, gBridgeTopic, "offline", 7, 1, 1);
+  gOfflineMsg = id;
+  if (id < 0) return false;
+  logf("MQTT", "availability offline (retained) before listening to a new console");
+  return true;
+}
+bool mqttOfflineAcked() { return gOfflineAck.load(); }
+bool mqttClientGone() { return gMqtt == nullptr; }
 
 static bool publishAvailability(const char* id, bool online) {
   char t[64];
@@ -1064,6 +1082,10 @@ static void testTick() {
       testFinish("failed", "fauxcloud is not on the home network");
       return;
     }
+    if (captureQuiet()) {  // listening to a new console: no MQTT client at all, a test one included
+      testFinish("failed", "fauxcloud is listening to a new console");
+      return;
+    }
     esp_mqtt_client_config_t cfg = {};
     cfg.broker.address.hostname = gTestHost;
     cfg.broker.address.port = gTestPort;
@@ -1090,7 +1112,7 @@ static void testTick() {
 // Every loop() pass, a few discovery items while publishing is not paused: the bridge first, then the
 // ghosts, then the stations. A disconnect leaves the cursors; the reconnect starts them again.
 static void announceTick() {
-  if (!gMqttConnected || otaActive()) return;
+  if (!gMqttConnected || otaActive() || captureQuiet()) return;
   int budget = 8;  // items per pass (skipped fields count too: a pass stays short)
   while (gBridgeStep && budget > 0 && paceOk()) {
     budget--;
@@ -1148,15 +1170,26 @@ void mqttLoop() {
     otaPaused = false;
     gRestartReq = true;
   }
+  // Listening to a new console: the client stops once its retained "offline" went out (app_capture.cpp's order) and
+  // starts again through the normal start ("online", the discovery) when the mode ends
+  static bool capPaused = false;
+  if (captureMqttOff() && gMqtt && !capPaused) {
+    capPaused = true;
+    mqttStop();
+    logf("MQTT", "stopped while listening to a new console");
+  } else if (!captureMqttOff() && capPaused) {
+    capPaused = false;
+    gRestartReq = true;
+  }
   if (gInitRetryMs && millis() - gInitRetryMs >= 30000) {
     gInitRetryMs = 0;
     if (!gMqtt) gRestartReq = true;
   }
-  if (gStartReq && WiFi.isConnected() && !otaActive()) {  // a rejoin keeps a client it already has
+  if (gStartReq && WiFi.isConnected() && !otaActive() && !captureQuiet()) {  // a rejoin keeps a client it already has
     gStartReq = false;
     if (!gMqtt && !gInitRetryMs) gRestartReq = true;
   }
-  if (gRestartReq && WiFi.isConnected() && !otaActive()) {
+  if (gRestartReq && WiFi.isConnected() && !otaActive() && !captureQuiet()) {  // a settings save waits for the mode's end
     gRestartReq = false;
     mqttStart();
   }
@@ -1610,6 +1643,7 @@ Diag diagNow() {
   d.mode = gMode == Mode::Run ? "run" : "setup";
   adminLockInfo(&d.admin_locked, &d.admin_lock_s, &d.admin_failures);
   d.heap_low = heapLow(&d.heap_min_10m);
+  d.capture = captureQuiet();
   httpMetrics(&d.http_requests, &d.http_304, &d.http_busy_ms_max, &d.http_aborted);
   d.http_purged = httpPurged();
   d.http_shed = httpShed();

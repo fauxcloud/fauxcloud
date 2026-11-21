@@ -5,7 +5,9 @@
 //   ResetCommit  10 Hz strobe          factory reset triggered, about to wipe + reboot
 //   ButtonHeld   one blink per second  BOOT is being held: 1, 2, 3, 4 (release at 1-2 = setup again, keeps data);
 //                                      from 4.5 s the reset strobe: the next second erases
-//   Setup        4 Hz fast blink       setup mode: "set me up" (join the fauxcloud-setup-XXXX Wi-Fi)
+//   Setup        4 Hz fast blink       setup mode: "set me up" (join the fauxcloud-setup-XXXX Wi-Fi); also while
+//                                      a firmware upload is written
+//   Listening    steady on             listening to a new console (MQTT stopped on purpose: not an alarm)
 //   Booting      heartbeat or 1 Hz     the first 12 s: boot transients (STA not up yet) are not alarms
 //   Attention    triple pulse          run mode, something needs a look: MQTT configured but down, admin locked,
 //                                      heap low
@@ -17,7 +19,7 @@
 
 namespace fc {
 
-enum class LedState : uint8_t { ResetCommit, ButtonHeld, Setup, Booting, Attention, Connecting, Ok };
+enum class LedState : uint8_t { ResetCommit, ButtonHeld, Setup, Booting, Attention, Connecting, Ok, Listening };
 
 struct LedInputs {
   bool reset_commit;
@@ -27,6 +29,7 @@ struct LedInputs {
   bool attention;
   uint32_t uptime_ms;
   bool ota;  // a firmware upload is being written: the setup pattern, 4 Hz
+  bool capture;  // listening to a new console: a steady light (MQTT is stopped on purpose, not an alarm)
   uint32_t held_ms;  // how long BOOT has been held (HoldButton::heldMs)
 };
 constexpr uint32_t LED_HELD_STROBE_MS = 4500;

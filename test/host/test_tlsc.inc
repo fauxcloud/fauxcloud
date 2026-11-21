@@ -166,6 +166,7 @@ struct TlsServer {
   size_t max_chunk = SIZE_MAX;   // bytes per client read (splits)
   int stop_after_reads = -1;     // the pump stops (a timeout) after this many client reads
   int reads = 0, writes = 0;
+  std::vector<uint8_t> hello;    // the client's first bytes (test_capture.inc reads its ClientHello)
   explicit TlsServer(uint16_t only_suite = 0) {
     static const uint16_t SUITES[] = {BR_TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256, BR_TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
                                       BR_TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305_SHA256};
@@ -261,6 +262,7 @@ struct TlsServer {
   static int cliWrite(void* ctx, const uint8_t* in, size_t n) {
     TlsServer* s = (TlsServer*)ctx;
     s->writes++;
+    if (s->hello.size() < 2048) s->hello.insert(s->hello.end(), in, in + std::min(n, 2048 - s->hello.size()));
     // count the client's handshake records (type 22): a renegotiation would add a new ClientHello
     for (size_t i = 0; i < n; i++) {
       if (s->w_left) {

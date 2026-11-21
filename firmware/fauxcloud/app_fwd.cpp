@@ -1453,7 +1453,7 @@ void fwdTick() {
   if (gJobSt.load() == J_RUNNING && !gAbort.load()) {  // abort a running send: heap, OTA, restart, the 10-s deadline
     const HeapNow h = heapNow();
     const char* why = fwdAbortWhy(h.free8, h.largest8, otaActive(),
-                                  rebootPending() || factoryResetPending(), ms - gB->job.t0);
+                                  rebootPending() || factoryResetPending(), ms - gB->job.t0, captureQuiet());
 #if FWD_TLS
     // A page wins over a scheduled METAR / TAF fetch or WU pull -- a page request before the answer's status line
     // aborts it (`yield`, retried by the source); after it the answer is short and is read to the end. A user's job
@@ -1522,6 +1522,7 @@ void fwdTick() {
   if (storeBusy()) busy |= FB_STORE;
   if (mqttBusy()) busy |= FB_MQTT;
   if (rebootPending() || factoryResetPending() || otaActive()) busy |= FB_RESTART;
+  if (captureQuiet()) busy |= FB_CAPTURE;
   const bool timeOk = outlookTimeOk();
   if (!staUp() || !timeOk) busy |= FB_LINK;
   tc.mark(TP_BUSY);

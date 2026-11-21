@@ -76,6 +76,7 @@ BUNDLES = {
     "admin-fwd.js": ["admin-fwd.js"],  # the admin "Online services" sheet (lazy)
     "admin-metar.js": ["admin-metar.js"],  # the admin "Airport weather" sheet (lazy; FWD_TLS builds use it)
     "admin-sheets.js": ["admin-sheets.js"],  # MQTT, Name, Password and devices, Maintenance (lazy)
+    "admin-capture.js": ["admin-capture.js"],  # the admin "Listen to a new console" sheet (lazy, from Publishing)
     # the strip's words and glyphs as their own asset, so the admin's Weather description draws the same blocks
     # (loaded before outlook-why.js there); the dashboard loads it at once, before status.js (defer keeps the order)
     "outlook.js": ["outlook.js"],
@@ -85,7 +86,7 @@ BUNDLES = {
 # page -> the assets it loads at once, and the ones it loads on first use
 PAGES = {
     "index.html": {"initial": ["app-dash.css", "outlook.js", "status.js"], "lazy": ["dash-lg.js", "dash-sheet.js", "outlook-why.js", "dash-airport.js", "dash-wufc.js", "sky.css", "sky.js"]},
-    "admin.html": {"initial": ["app-admin.css", "admin.js"], "lazy": ["admin-station.js", "outlook.js", "outlook-why.js", "admin-learn.js", "admin-fwd.js", "admin-metar.js", "admin-sheets.js", "sky.css", "sky.js"]},
+    "admin.html": {"initial": ["app-admin.css", "admin.js"], "lazy": ["admin-station.js", "outlook.js", "outlook-why.js", "admin-learn.js", "admin-fwd.js", "admin-metar.js", "admin-sheets.js", "admin-capture.js", "sky.css", "sky.js"]},
     "setup.html": {"initial": [], "lazy": []},  # its inline script names sky.css (counted in the flash total, not here)
 }
 # gzip bytes. Initial = what a page needs before it works (shell + initial assets): the measured 30 KB envelope that
@@ -105,7 +106,9 @@ BUDGET_INITIAL = {"index.html": 33941 + HASH_NOISE, "admin.html": 30720, "setup.
 # A first visit in a language: the initial page plus the packs of its initial scripts, fetched before the first poll (the
 # same cold-load rule; tools/coldload.py --lang measures it). Each language names its own figure, at the measured value;
 # a language without one fails the budget check.
-BUDGET_FIRST = {("index.html", "pl"): 38492 + HASH_NOISE, ("admin.html", "pl"): 34187 + HASH_NOISE}
+# the admin's: + "Listen to a new console"'s home line, its button on the fauxcloud Wi-Fi sheet and their admin.pl.json keys,
+# +437 B (34 026 -> 34 463 measured on 1.1.0-dev.2)
+BUDGET_FIRST = {("index.html", "pl"): 38492 + HASH_NOISE, ("admin.html", "pl"): 34187 + 437 + HASH_NOISE}
 # 13 KB: about 4.5 ms of worker time per KB -> ~60 ms per file, far under the 200 ms upload rule; sized by tz.json
 # (12 968 B, the zone picker's pack), the largest lazy file
 LAZY_FILE_MAX = 13312
@@ -118,12 +121,16 @@ LAZY_FILE_MAX = 13312
 # words in their W tables, lang.js on both and the packs' manifests: +10 354 B (148 594 measured); the tiles' lower-case
 # measure names and the forecast card's day words (no W text lower-cased in code): +72 B (148 666 measured); the history
 # chart's lowest / highest labels, the sky mask drawn on the page (sky.js / sky.css) and the record CSV's per-kind columns with
-# the compass: +584 B over 148 659 (149 243 measured)
-WEB_CODE_MAX = 149243 + HASH_NOISE
+# the compass: +584 B over 148 659 (149 243 measured); "Listen to a new console" (admin-capture.js, its button on the
+# fauxcloud Wi-Fi sheet, the home line, the update sheet's refusal): +4 921 B (149 091 -> 154 012 measured on 1.1.0-dev.2)
+WEB_CODE_MAX = 149243 + 4921 + HASH_NOISE
 WEB_ASSET_MAX = 52000
 WEB_ASSET_EXT = (".json", ".png", ".svg", ".txt")
 # the language packs (web/lang -> <asset>.<lang>.json), a line of their own so code and assets stay what they were
-WEB_LANG_MAX = 29365 + HASH_NOISE  # measured (pl): the dashboard's six packs and the admin's six (29 365)
+# measured (pl): the dashboard's six packs and the admin's six (29 365); + admin-capture's pack and the four keys of
+# "Listen to a new console" elsewhere: 30 568 measured on 1.1.0-dev.2 (+1 196 over 29 372); the cap is the measurement + the
+# 64-B hash noise (the old base sat 7 B under its measurement, which left 52 B, under the noise margin)
+WEB_LANG_MAX = 30568 + HASH_NOISE
 WEB_FLASH_MAX = WEB_CODE_MAX + WEB_ASSET_MAX + WEB_LANG_MAX
 # The faces with packs: the dashboard and the admin; one pack per script asset, its namespaces = the asset's source files'
 # stems, a page shell's words (data-t) travel with its main script. The setup face stays English.

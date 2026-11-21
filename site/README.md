@@ -58,7 +58,7 @@ fails; on a phone, a table of three or more columns shows each row as a card, it
 ARIA table roles), `---`, a button: a paragraph that is only `[**Label**](target)`,
 a photo: a paragraph that is only `![alt](../site/assets/<name>-<width>.jpg)` at the page's top level, not in a list
 item or a callout (one variant of `tools/site_images.py`; GitHub shows that file, the site every width of it, beside
-the text from 600 px; a title in quotes, `![alt](path "Caption")`, becomes its caption; with script, a click opens the
+the text from 600 px; photos one after another make one row, in their order; a title in quotes, `![alt](path "Caption")`, becomes its caption; with script, a click opens the
 largest variant in a popout), and a labelled entry: a paragraph that
 starts `**Cause.**`, `**Fix.**` or `**fauxcloud shows this as**` renders as a `<dl>` with the label in its own column (a
 label alone takes the list after it and the plain paragraphs after that list). Raw HTML is escaped; an image inside a
@@ -92,6 +92,21 @@ The photos on the site are variants of private originals, made once on a dev mac
 `QUALITY_FOR`), committed under `site/assets/`. The case renders (`case-*.jpg`) are the case designer's, used with
 permission (`COPYRIGHT.md`).
 Photos are never cropped by CSS: each `<img>` carries the file's width and height.
+
+## Screenshots of the admin face
+
+The four `shot-listen-*` pictures on Report a console come from the laptop mock of the admin face
+(`test/tools/capture_mock.py`, fictional data only: the AP `fauxcloud-1A2B`, `example.net` hosts, the documentation MAC
+prefix `00:00:5e`), taken at phone size by a headless browser:
+
+1. Start the mock (`python -I test/tools/capture_mock.py --node <node>`) and set its scenario `shot`
+   (`http://localhost:8399/__scn?s=shot`): a release version, a fixed start time, every pause line, the whole session
+   played by the first poll. Stop a running capture first (`POST /api/admin/capture/stop`).
+2. Start Edge or Chrome headless with `--remote-debugging-port=9333`, then for each of `home`, `wifi`, `start`, `listening`:
+   `node tools/site_shot.js 9333 "http://localhost:8399/admin?shot=<name>" shot-listen-<name>.png` (375 × 812 at 2x,
+   dark; `?shot=` opens the sheets by itself). Name the `listening` one `shot-listen-report.png`.
+3. `python tools/site_images.py <that folder> --only shot-listen-home.png shot-listen-wifi.png shot-listen-start.png
+   shot-listen-report.png`.
 
 ## The share card
 

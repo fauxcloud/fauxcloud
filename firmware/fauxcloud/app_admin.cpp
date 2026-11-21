@@ -757,6 +757,14 @@ static esp_err_t onConsole(httpd_req_t* req) {
 // and restarts, or {error} without a restart.
 static esp_err_t onOta(httpd_req_t* req) {
   if (!gate(req, true)) return ESP_OK;
+  if (captureQuiet()) {  // listening to a new console: the update waits for its stop (a capture start waits for an update)
+    httpd_resp_set_hdr(req, "Connection", "close");
+    httpd_resp_set_status(req, "409 Conflict");
+    sendJson(req, "{\"error\":\"capture\"}");
+    shutdown(httpd_req_to_sockfd(req), SHUT_RD);
+    httpd_sess_trigger_close(req->handle, httpd_req_to_sockfd(req));
+    return ESP_OK;
+  }
   const char* refused = otaStart(req);
   if (!refused) return ESP_OK;  // the OTA task owns the request now
   // A refusal closes the connection instead of reading the rest of a 1.4 MB body into nowhere (httpd
@@ -974,6 +982,7 @@ void registerAdmin(httpd_handle_t srv) {
   };
   registerUris(srv, uris, sizeof uris / sizeof uris[0]);
   registerFwd(srv);  // /api/admin/forwarding* (app_fwd.cpp)
+  registerCapture(srv);  // /api/admin/capture* (app_capture.cpp)
 }
 
 }  // namespace app

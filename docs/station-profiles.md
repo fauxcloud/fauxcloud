@@ -130,7 +130,7 @@ fauxcloud ships with these behaviours as they are. If you see one, tell us (see 
 | **Solar / UV in full sun** | **Not verified on this unit yet.** Other users report that `solarRadiation` above about 367 W/m² wraps negative and arrives as text like `-117.-5`. This unit has only been read up to about 167 W/m². | Drops a value it cannot read, keeps the rest of the upload, and still answers `success`. | A solar tile that goes blank or odd in bright sun. |
 | **Gusts** | **Not verified on this unit yet.** A gust above 99.9 km/h (62 mph) has never been seen. One test, blowing into the anemometer, showed 99.9 km/h on the display and the same value in mph in the upload. | Shows what the console sends. | Gusts that stop at 99.9 km/h in a real storm. |
 | **`dateutc` in summer** | **Reported.** The console may leave out the daylight-saving hour, so `dateutc` can be an hour off between March and October. | Does not trust `dateutc` as the time of a reading. It uses its own clock. | Nothing on screen. This only matters if you read the raw line. |
-| **Other firmware versions and batches** | **Not verified.** Only 1.0.1 was seen. Newer batches of similar consoles are reported to upload over HTTPS only, which fauxcloud cannot receive. | Nothing: it only answers plain HTTP. | A console that joins the Wi-Fi but never uploads. |
+| **Other firmware versions and batches** | **Not verified.** Only 1.0.1 was seen. Newer batches of similar consoles are reported to upload over HTTPS only, which fauxcloud cannot receive. | Nothing: it only answers plain HTTP. | A console that joins the Wi-Fi but never uploads: [report it](report-a-console.md). |
 | **Upload to Weather Underground without fauxcloud** | **Not verified on the console.** Weather Underground now refuses uploads that lack `action=updateraw`, and this console never sends it. Found by live tests with a replayed request, not on the console itself. | The console talks to fauxcloud only. When you turn on forwarding, fauxcloud adds the missing parameter. | A forwarded station that Weather Underground does not show. Check the "Key refused" message in the forwarding sheet. |
 | **Weathercloud** | **Not verified.** The request is known (see [The upload](#the-upload)). Linking a station on Weathercloud itself is not verified: one other user never got it linked. | Answers `200` only (see [What fauxcloud does](#what-fauxcloud-does-with-this-console)). | Weathercloud showing no data is expected. |
 
@@ -163,14 +163,8 @@ Consoles with the same setup page (a `WWS-` network, `http://192.168.1.1`, a Wea
 
 ## Report a new console model
 
-A short report is enough. Please collect:
+A short report is enough, and it is how a model gets onto this page. [Report a console](report-a-console.md) shows the steps: fauxcloud listens to what your console sends (**Settings**, **fauxcloud Wi-Fi for your station**, **Listen to a new console**), you copy the report and paste it into the [console report](https://github.com/fauxcloud/fauxcloud/issues/new?template=console_report.yml) form on GitHub.
 
-1. **Brand and model** as printed on the console and the box, and where you bought it.
-2. **Firmware version**, shown on the console's setup page.
-3. **Region and frequency** (868 or 915 MHz).
-4. **A capture of what it sends:** open **Settings**, then the station, then its **Console** tab, and copy the last lines. The console's name and key are hidden there already. Please also say which unknown fields appear under **Extra sensors**.
-5. **Photos:** the label on the back of the console (cover any MAC address or serial number on it), and the setup page after the console joined fauxcloud's network (you can hide your Wi-Fi name and password).
-6. **What worked and what did not:** did it upload, which fields were missing, did the pressure read the factory value, did it need the power adapter, how often did it send.
-7. **Anything odd:** a field with a strange value, a console that sends more than fourteen fields, or one that never uploads.
+A console that uploads already needs no listening: copy the last lines from its station's **Console** tab instead, and say which unknown fields appear under **Extra sensors**.
 
 Never send passwords, keys, the crash file (it contains your passwords) or the exact location of your weather station.

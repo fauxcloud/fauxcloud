@@ -68,10 +68,11 @@ enum HeapCtx : uint16_t {
   HC_LEARN = 1 << 5,   // a learner migration / backfill pass ran in that second
   HC_OTA = 1 << 6,     // an OTA write was running
   HC_UPLOAD = 1 << 7,  // a console upload arrived in that second
+  HC_CAPTURE = 1 << 8,  // the bridge was listening to a new console
 };
-constexpr int HEAP_CTX_BITS = 8;
+constexpr int HEAP_CTX_BITS = 9;
 inline const char* heapCtxName(int bit) {
-  static const char* const N[HEAP_CTX_BITS] = {"http", "accept", "fwd", "mqtt", "store", "learn", "ota", "upload"};
+  static const char* const N[HEAP_CTX_BITS] = {"http", "accept", "fwd", "mqtt", "store", "learn", "ota", "upload", "capture"};
   return bit >= 0 && bit < HEAP_CTX_BITS ? N[bit] : "";
 }
 
@@ -94,7 +95,7 @@ struct HeapDip {
   }
 };
 
-// The context names comma-joined ("-" for none) into out (cap >= 44 holds all eight).
+// The context names comma-joined ("-" for none) into out (cap >= 52 holds all nine).
 inline void heapCtxJoin(uint16_t ctx, char* out, size_t cap) {
   size_t n = 0;
   if (cap) out[0] = 0;
@@ -117,7 +118,7 @@ struct HeapLowLine {
   HeapDip dip;
 };
 inline int heapLowLine(char* out, size_t cap, const HeapLowLine& l) {
-  char ctx[48];
+  char ctx[56];
   heapCtxJoin(l.dip.ctx, ctx, sizeof ctx);
 #if FC_DIAG_BENCH
   return snprintf(out, cap, "low-water min8 %lu B (free8 %lu, largest8 %lu) rssi %d ap %d mqtt %s busy10m %lu ms ctx %s "

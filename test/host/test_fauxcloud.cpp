@@ -31,6 +31,7 @@
 #include "metrics.h"
 #include "console.h"
 #include "tls_sni.h"
+#include "capture.h"
 #include "store.h"
 #include "robust.h"
 #include "wu_parse.h"
@@ -1546,7 +1547,7 @@ static void testDiagAddendum() {
 #else  // the bench keys are absent from the release JSON
   const char* const mid = "\"heap_min8_t\":null,\"heap_min8_ctx\":[],\"heap_min8_socks\":null,\"http_aborted\":2,";
 #endif
-  CHECK(contains(s, (std::string("\"heap_low\":true,\"heap_min_10m\":40000,\"http_requests\":7,\"http_304\":3,") + mid +
+  CHECK(contains(s, (std::string("\"heap_low\":true,\"heap_min_10m\":40000,\"http_requests\":7,\"http_304\":3,\"capture\":false,") + mid +
                     "\"http_purged\":4,\"http_shed\":9,\"http_paced\":0,\"sta_ip\":\"192.168.1.20\",\"fw_version\":\"fauxcloud 0.1.0-b3\","
                     "\"hostname\":\"fauxcloud\",\"stations_allocated\":1,\"stations_used\":1,\"mode\":\"run\","
                     "\"admin_lock\":{\"active\":true,\"until_s\":290,\"failures\":10},\"store_ms_max\":0,\"build\":\"\",\"page\":\"ad31c0de\","
@@ -1576,7 +1577,7 @@ static void testDiagAddendum() {
     Out oe(toString, &se, buf, sizeof buf);
     renderLive(oe, all, c, &e);
     oe.flush();
-    CHECK(contains(se, "\"http_304\":3,"
+    CHECK(contains(se, "\"http_304\":3,\"capture\":false,"
                        "\"ota_heap\":{\"start8\":50240,\"min8\":24812,\"largest_min8\":12288},\"heap_min8_t\":null,\"heap_min8_ctx\":[],\"heap_min8_socks\":null,\"tasks\":{},\"http_busy_ms_max\":12") &&
           jsonParses(se));
   }
@@ -3477,15 +3478,17 @@ static void testHeapThresholds() {
         dip.ctx == (HC_HTTP | HC_ACCEPT) && dip.socks == 127);  // the socket count is clamped to int8
   CHECK(dip.note(2000, 61000, 0, -5) && dip.ctx == 0 && dip.socks == -1);
   CHECK(std::string(heapCtxName(0)) == "http" && std::string(heapCtxName(7)) == "upload" &&
-        std::string(heapCtxName(8)).empty() && std::string(heapCtxName(-1)).empty());
+        std::string(heapCtxName(8)) == "capture" && std::string(heapCtxName(9)).empty() && std::string(heapCtxName(-1)).empty());
   // the low-water log line carries the context; its widest case fits the boot log's 200-B line uncut
-  char cj[48];
+  char cj[56];
   heapCtxJoin(0, cj, sizeof cj);
   CHECK(std::string(cj) == "-");
   heapCtxJoin(HC_HTTP | HC_ACCEPT, cj, sizeof cj);
   CHECK(std::string(cj) == "http,accept");
   heapCtxJoin(0xFF, cj, sizeof cj);
   CHECK(std::string(cj) == "http,accept,fwd,mqtt,store,learn,ota,upload");
+  heapCtxJoin(0x1FF, cj, sizeof cj);  // all nine (the capture mode's bit too)
+  CHECK(std::string(cj) == "http,accept,fwd,mqtt,store,learn,ota,upload,capture");
   heapCtxJoin(0xFF, cj, 12);  // a short buffer keeps whole names only
   CHECK(std::string(cj) == "http,accept");
   HeapLowLine hl{2812, 53120, 49140, -66, 1, true, 4, HeapDip{}};
@@ -3499,12 +3502,12 @@ static void testHeapThresholds() {
   CHECK(std::string(msg) == "low-water min8 2812 B (free8 53120, largest8 49140) rssi -66 ap 1 mqtt up ctx http,accept socks 6");
 #endif
   HeapLowLine wide{327680, 327680, 327680, -100, 4, false, 4294967295u, HeapDip{}};
-  wide.dip.note(327680, 4294967295u, 0xFF, 300);
+  wide.dip.note(327680, 4294967295u, 0x1FF, 300);
   heapLowLine(msg, sizeof msg, wide);
   char wl[BOOTLOG_LINE_MAX + 1];
   const size_t wn = bootlogLine(wl, 4294967295u, "HEAP", msg, false);
   printf("  info: widest [HEAP] low-water line = %u bytes of %u\n", (unsigned)wn, (unsigned)BOOTLOG_LINE_MAX);
-  CHECK(wn <= BOOTLOG_LINE_MAX && !contains(wl, "[cut]") && contains(wl, "ctx http,accept,fwd,mqtt,store,learn,ota,upload socks 127\n"));
+  CHECK(wn <= BOOTLOG_LINE_MAX && !contains(wl, "[cut]") && contains(wl, "ctx http,accept,fwd,mqtt,store,learn,ota,upload,capture socks 127\n"));
 }
 
 // page pacing on a fake heap -- go above the line, wait in steps up to the limit, then shed; the largest-block
@@ -6600,6 +6603,7 @@ static void testForecastGolden() {
 #include "wufc.h"
 #include "wufc_sched.h"
 #include "test_wufc.inc"
+#include "test_capture.inc"
 
 // An error is stored whole or counted as dropped, never cut; every stored text is the one added.
 static void testErrorsWhole() {
@@ -6912,6 +6916,7 @@ int main() {
   testAnnList();
   testTrust();
   testTlsSni();
+  testCapture();
   testRollbackAndWatchdogs();
   testBridgeStatusOta();
   printf("%s: %d passed, %d failed\n", g_fail ? "FAILED" : "OK", g_pass, g_fail);

@@ -72,6 +72,8 @@ ship tools/i18n_pack.py
 ship tools/laptop-test.ps1
 ship tools/leakgate.py
 ship tools/leakgate-allow.txt
+ship tools/listen_replay.py
+ship tools/listen_replay_golden.txt
 ship tools/publish-manifest.txt
 ship tools/release_assets.py
 ship tools/mslp_normals.py
@@ -84,6 +86,7 @@ ship tools/rtc_layout.txt
 ship tools/sim-station.ps1
 ship tools/site_images.py
 ship tools/site_md.py
+ship tools/site_shot.js
 ship tools/site_versions.py
 ship tools/t3_score.py
 ship tools/taf_disagree.py
