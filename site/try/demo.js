@@ -203,7 +203,8 @@
   // ---- the pages' links between the faces, inside /try/
   document.addEventListener('click', e => {
     const a = e.target.closest && e.target.closest('a[href]'), h = a && a.getAttribute('href');
-    const to = h === '/admin' ? BASE + 'admin.html' : h === '/' ? BASE : null;
+    // the dashboard's Settings link is /try/admin.html in the demo build (a crawler finds a page), /admin elsewhere
+    const to = h === '/admin' || h === BASE + 'admin.html' ? BASE + 'admin.html' : h === '/' ? BASE : null;
     if (to) { e.preventDefault(); location.href = to + location.hash; }
   }, true);
 

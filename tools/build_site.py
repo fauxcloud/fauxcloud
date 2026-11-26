@@ -6,7 +6,9 @@ Two halves, one output folder:
        - /a/<hash8>/<name> for every asset of the header, at the same hashed path (the hash of the gzip bytes);
        - /try/index.html and /try/admin.html = page() of web/index.html and web/admin.html with exactly two added
          blocks: DEMO_TAG before the first bundle script (the shim must be installed before the page scripts run)
-         and the share-card tags (og_tags) right before </head>;
+         and the share-card tags (og_tags) right before </head>; and in the dashboard one link (TRY_LINK): its
+         Settings button points at /try/admin.html instead of /admin, so a crawler that follows the raw href finds
+         a page (the board's /admin is no page of the site);
        - /try/demo.js and /try/demo.css (the extras, site/try/), /try/replay.js (demo/replay.js as it is) and
          /try/data/ (the fixtures the shim reads, copied as they are: index.json, history/, learn/, static/, admin/).
   2. The site's own pages, from the templates in site/templates/ and the public Markdown (docs/*.md, SECURITY.md,
@@ -200,6 +202,19 @@ def try_block(dest):
 
 
 TRY_OG = {dest: try_block(dest) for dest in SHELLS.values()}
+# the one link the build changes in a shell (bare() changes it back before the byte check): the dashboard's Settings
+# button. The shim (site/try/demo.js) keeps the demo's #scenario when it is clicked.
+TRY_LINK = {"try/index.html": (b'href="/admin"', b'href="/try/admin.html"')}
+
+
+def relink(shell, dest):
+    """The shell with its TRY_LINK href changed (exactly one occurrence, or the build stops)."""
+    if dest not in TRY_LINK:
+        return shell
+    old, new = TRY_LINK[dest]
+    if shell.count(old) != 1:
+        raise SystemExit("build_site: %s: expected one %s, found %d" % (dest, old.decode(), shell.count(old)))
+    return shell.replace(old, new, 1)
 
 
 def with_tag(shell, og=b""):
@@ -216,8 +231,12 @@ def with_tag(shell, og=b""):
 
 
 def bare(shell, dest):
-    """A demo shell minus the two added blocks: what page() must have made."""
-    return shell.replace(DEMO_TAG, b"", 1).replace(TRY_OG[dest], b"", 1)
+    """A demo shell minus the two added blocks and with its link back: what page() must have made."""
+    shell = shell.replace(DEMO_TAG, b"", 1).replace(TRY_OG[dest], b"", 1)
+    if dest in TRY_LINK:
+        old, new = TRY_LINK[dest]
+        shell = shell.replace(new, old, 1)
+    return shell
 
 
 def fixture_files():
@@ -596,7 +615,7 @@ def emit(out, local=None, extra=None):
     for name, gzb, path, _ in table:
         files[path.lstrip("/")] = gzip.decompress(gzb)
     for page, dest in SHELLS.items():
-        files[dest] = with_tag(g.page(g.WEB / page, table), TRY_OG[dest])
+        files[dest] = relink(with_tag(g.page(g.WEB / page, table), TRY_OG[dest]), dest)
     for dest, src in EXTRAS.items():
         files[dest] = src.read_bytes()
     for rel, src in fixture_files():
@@ -977,11 +996,13 @@ def check(out, local=None, extra=None, served=None):
             errors.append("%s: the demo tag must appear exactly once" % dest)
         if shell.count(TRY_OG[dest]) != 1 or not shell.endswith(TRY_OG[dest] + shell[shell.find(b"</head>"):]):
             errors.append("%s: the share-card block must appear exactly once, right before </head>" % dest)
+        if dest in TRY_LINK and (shell.count(TRY_LINK[dest][0]) or shell.count(TRY_LINK[dest][1]) != 1):
+            errors.append("%s: the Settings link must point at the demo's settings page, once" % dest)
         b_ = bare(shell, dest)
         if b_ != g.page(g.WEB / page, table):
-            errors.append("%s: differs from page() of web/%s beyond the two added blocks" % (dest, page))
+            errors.append("%s: differs from page() of web/%s beyond the two added blocks and the link" % (dest, page))
         if b_ != gzip.decompress(h_shells[page]):
-            errors.append("%s: differs from the header's %s beyond the two added blocks" % (dest, page))
+            errors.append("%s: differs from the header's %s beyond the two added blocks and the link" % (dest, page))
         first = FIRST_BUNDLE.search(shell)
         if not first or shell.find(DEMO_TAG) + len(DEMO_TAG) != first.start():
             errors.append("%s: the demo tag is not right before the first bundle script" % dest)
@@ -1043,7 +1064,7 @@ def main(argv):
         if errors:
             print("build_site: %d finding(s):\n  %s" % (len(errors), "\n  ".join(errors)))
             return 1
-        print("build_site: /try/ shells and assets are the shipped bytes (two added blocks per shell); tokens in step "
+        print("build_site: /try/ shells and assets are the shipped bytes (two added blocks per shell, the demo link); tokens in step "
               "with app.css; links, share cards, search tags, sitemap, words and budgets clean")
         return 0
     t = tokens()

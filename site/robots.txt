@@ -1,4 +1,6 @@
 User-agent: *
 Allow: /
+# the installer's licence notices: a plain text file, not a page for search
+Disallow: /install/*.txt
 
 Sitemap: https://fauxcloud.org/sitemap.xml
