@@ -32,8 +32,39 @@ class Build(unittest.TestCase):
             self.assertEqual(shell.count(b.DEMO_TAG), 1, dest)
             self.assertEqual(shell.count(b.TRY_OG[dest]), 1, dest)
             self.assertEqual(b.bare(shell, dest), g.page(g.WEB / page, self.table), dest)
-            # exactly the two blocks: nothing else was added
-            self.assertEqual(len(shell), len(g.page(g.WEB / page, self.table)) + len(b.DEMO_TAG) + len(b.TRY_OG[dest]))
+            # exactly the two blocks and the demo link: nothing else was added
+            link = len(b.TRY_LINK[dest][1]) - len(b.TRY_LINK[dest][0]) if dest in b.TRY_LINK else 0
+            self.assertEqual(len(shell), len(g.page(g.WEB / page, self.table)) + len(b.DEMO_TAG) + len(b.TRY_OG[dest]) + link)
+
+    def test_the_demo_dashboard_links_to_the_demo_settings_page(self):
+        # a crawler follows the raw href: /admin is the board's, no page of the site (a Search Console 404)
+        shell = (self.out / "try/index.html").read_bytes()
+        self.assertNotIn(b'href="/admin"', shell)
+        self.assertEqual(shell.count(b'href="/try/admin.html"'), 1)
+        self.assertIn(b'href="/admin"', g.page(g.WEB / "index.html", self.table))  # the board's own page is unchanged
+        demo = (b.ROOT / "site" / "try" / "demo.js").read_text(encoding="utf-8")
+        self.assertIn("h === BASE + 'admin.html'", demo)  # the shim keeps the #scenario on that link
+        with self.assertRaises(SystemExit):
+            b.relink(b'<a href="/x">', "try/index.html")
+
+    def test_a_doubled_settings_link_stops_the_build_or_fails_the_check(self):
+        old, new = b.TRY_LINK["try/index.html"]
+        # the board's dashboard with the link twice: the build stops instead of changing one and leaving the other
+        with self.assertRaises(SystemExit):
+            b.relink(b"<a " + old + b"><a " + old + b">", "try/index.html")
+        # an emitted demo dashboard with the demo link twice: the check names it
+        real = b.relink
+
+        def doubled(shell, dest):
+            out = real(shell, dest)
+            return out.replace(new, new + b" " + new, 1) if dest == "try/index.html" else out
+        b.relink = doubled
+        try:
+            with tempfile.TemporaryDirectory() as t:
+                errors = b.check(pathlib.Path(t) / "site")
+        finally:
+            b.relink = real
+        self.assertTrue(any("Settings link must point at the demo's settings page, once" in e for e in errors), errors)
 
     def test_each_shell_is_the_headers_page_plus_two_blocks(self):
         for page, dest in b.SHELLS.items():
@@ -373,6 +404,9 @@ class Site(unittest.TestCase):
         self.assertEqual(b.security_txt_checks(self.files[".well-known/security.txt"].decode("utf-8"),
                                                datetime.datetime.now(datetime.timezone.utc)), [])
         self.assertEqual(b.robots_checks(self.files["robots.txt"].decode("utf-8")), [])
+        # the installer's notices file is no page for search (it showed as a duplicate without a canonical)
+        self.assertIn("Disallow: /install/*.txt", self.files["robots.txt"].decode("utf-8").splitlines())
+        self.assertEqual([k for k in self.files if k.startswith("install/") and k.endswith(".txt")], ["install/third-party-notices.txt"])
 
     def test_the_security_txt_check_names_each_fault(self):
         now = datetime.datetime(2030, 6, 1, tzinfo=datetime.timezone.utc)

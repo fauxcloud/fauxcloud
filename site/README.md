@@ -123,7 +123,9 @@ repository's social preview (Settings → Social preview).
 - The build imports `tools/gen_web_assets.py` and writes the same pages and assets the firmware serves: every asset at
   its hashed path `/a/<hash8>/<name>` (uncompressed, for a static host), and `/try/index.html` + `/try/admin.html` =
   the firmware's `index.html` and `admin.html` with two added blocks: one line, `<script src="/try/demo.js"></script>`,
-  before the first page script, and the share-card tags right before `</head>`. Nothing of the dashboard is copied or
+  before the first page script, and the share-card tags right before `</head>`; and one link: the dashboard's Settings
+  button points at `/try/admin.html` instead of the board's `/admin` (`TRY_LINK`), so a crawler that follows the raw href
+  finds a page. The check changes it back before it compares the bytes. Nothing else of the dashboard is copied or
   edited for the demo, so every fix reaches it at the next build.
 - `site/try/` holds the extras: `demo.js` (the shim and the demo bar), `demo.css` (the bar, on the faces' colour
   tokens) and `demo_text.py` (the bar's words, pinned). `demo/replay.js` and the fixtures are copied next to them
